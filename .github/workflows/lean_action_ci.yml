@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: leanprover/lean-action@v1
-      - uses: leanprover-community/docgen-action@v1
+      - uses: leanprover-community/docgen-action@dacc1acc2a3f532cc577266979ba9c36c7593f7c # v1
         with:
           deploy: false
       - name: Upload documentation artifact
