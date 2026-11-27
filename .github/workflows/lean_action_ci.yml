@@ -29,8 +29,8 @@ jobs:
           lake env lean Cerny/AxiomCheck.lean > axiom-report.txt
           cat axiom-report.txt
           actual="$(grep -c 'depends on axioms:' axiom-report.txt)"
-          if [ "$actual" -ne 21 ]; then
-            echo "::error::Expected 21 audited theorems, found $actual"
+          if [ "$actual" -ne 26 ]; then
+            echo "::error::Expected 26 audited theorems, found $actual"
             exit 1
           fi
           flat="$(tr '\n' ' ' < axiom-report.txt | tr -s ' ')"

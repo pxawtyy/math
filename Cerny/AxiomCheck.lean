@@ -30,3 +30,8 @@ audit seal: any additional axiom makes the check fail.
 #print axioms Cerny.Counterexamples.balanced_16_counterexample
 #print axioms Cerny.Counterexamples.balanced_16_step2_counterexample
 #print axioms Cerny.Counterexamples.multi_cluster_trees_counterexample
+#print axioms Cerny.AmortizedBalanced.order_four_balanced_cerny
+#print axioms Cerny.AmortizedBalanced.master_balanced_version_A_excess_one
+#print axioms Cerny.AmortizedBalanced.master_balanced_version_B_excess_one
+#print axioms Cerny.AmortizedBalanced.order_six_no_phi6_balanced_cerny
+#print axioms Cerny.AmortizedBalanced.order_six_phi3_phi6_balanced_cerny

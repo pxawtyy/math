@@ -10,4 +10,5 @@ import Cerny.WeightedPrimeCycle
 import Cerny.BalancedPermutations
 import Cerny.CircularDubuc
 import Cerny.OneClusterAnnular
+import Cerny.AmortizedBalanced
 import Cerny.Counterexamples
