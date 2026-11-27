@@ -5,23 +5,24 @@ combinatorial, and spectral theory of the Černý conjecture, with **zero `sorry
 **zero `native_decide`**, and **only the standard Lean axioms**
 (`propext`, `Classical.choice`, `Quot.sound`).
 
-## Module Structure (12 Modules + Root)
+## Module Structure (13 Modules + Root)
 
 | # | File | Main Content | Status |
 |---|------|--------------|--------|
-| 0 | `Cerny/Defs.lean` | Definition of `Aut Q α`, `eval`, `image`, `preimage`, `IsSyncWord`, `IsSync`, `StronglyConnected` | Built |
-| 1 | `Cerny/Reduction.lean` | Reduction to the strongly connected case (`cerny_reduction_to_strongly_connected`), including $n=1$ | Built |
-| 2 | `Cerny/CernyLowerBound.lean` | Extremal family $C_n$ and optimality of $(n-1)^2$ (`cerny_lower_bound`) | Built |
-| 3 | `Cerny/Monotonic.lean` | Monotonic automata over a circular order (`monotonic_cerny_bound`) | Built |
-| 4 | `Cerny/PinFrankl.lean` | Pin–Frankl cubic bound $\frac{n(n^2-1)}{6}$ without exterior algebra (`pin_frankl_bound`) | Built |
-| 5 | `Cerny/KrylovEulerian.lean` | Krylov lemma and Kari's theorem for Eulerian automata $(n-1)^2$ (`kari_eulerian_bound`) | Built |
-| 6 | `Cerny/Aperiodic.lean` | Aperiodic automata with the improved bound $\lceil \frac{3}{4}(n-1)^2 \rceil$ (`aperiodic_bound`) | Built |
-| 7 | `Cerny/WeightedPrimeCycle.lean` | Multi-cluster initial step lemma and weights over prime cycles | Built |
-| 8 | `Cerny/BalancedPermutations.lean` | Permutation-balanced automata family (`prime_order_balanced_cerny`, `coprime_step_balanced_cerny`) | Built |
-| 9 | `Cerny/CircularDubuc.lean` | Annular cancellation by pure recurrence (`annular_cancellation`) and `span_orbit_mod_subspace` | Built |
-| 10 | `Cerny/OneClusterAnnular.lean` | Full composite one-cluster theorem (`one_cluster_cerny_bound`) and Dubuc's circular theorem (`dubuc_circular_bound`) | Built |
-| 11 | `Cerny/Counterexamples.lean` | 5 verified counterexamples on the *two-cluster* frontier via bitmask certificates and `decide` | Built |
-| — | `Cerny.lean` | Root module importing all 12 modules | Built |
+| 0 | `Cerny/Defs.lean` | Definition of `Aut Q α`, `eval`, `image`, `preimage`, `IsSyncWord`, `IsSync`, `StronglyConnected`; shared synchronization utility lemmas | Built |
+| 1 | `Cerny/Linear.lean` | Unified `pullbackLin 𝕜`, `rowAct 𝕜` and `dot 𝕜`, with the pullback/pushforward duality | Built |
+| 2 | `Cerny/Reduction.lean` | Reduction to the strongly connected case (`cerny_reduction_to_strongly_connected`), including $n=1$ | Built |
+| 3 | `Cerny/CernyLowerBound.lean` | Extremal family $C_n$ and optimality of $(n-1)^2$ (`cerny_lower_bound`) | Built |
+| 4 | `Cerny/Monotonic.lean` | Monotonic automata over a circular order (`monotonic_cerny_bound`) | Built |
+| 5 | `Cerny/PinFrankl.lean` | Pin–Frankl cubic bound $\frac{n(n^2-1)}{6}$ without exterior algebra (`pin_frankl_bound`) | Built |
+| 6 | `Cerny/KrylovEulerian.lean` | Krylov lemma and Kari's theorem for Eulerian automata $(n-1)^2$ (`kari_eulerian_bound`) | Built |
+| 7 | `Cerny/Aperiodic.lean` | Aperiodic automata with the improved bound $\lceil \frac{3}{4}(n-1)^2 \rceil$ (`aperiodic_bound`) | Built |
+| 8 | `Cerny/WeightedPrimeCycle.lean` | Multi-cluster initial step lemma and weights over prime cycles | Built |
+| 9 | `Cerny/BalancedPermutations.lean` | Permutation-balanced automata family (`prime_order_balanced_cerny`, `coprime_step_balanced_cerny`) | Built |
+| 10 | `Cerny/CircularDubuc.lean` | Field-generic annular cancellation and `finrank` lemmas over any `[Field 𝕜]` | Built |
+| 11 | `Cerny/OneClusterAnnular.lean` | Full composite one-cluster theorem (`one_cluster_cerny_bound`) and Dubuc's circular theorem (`dubuc_circular_bound`) | Built |
+| 12 | `Cerny/Counterexamples.lean` | 5 verified counterexamples on the *two-cluster* frontier via bitmask certificates and `decide` | Built |
+| — | `Cerny.lean` | Root module importing all 13 modules | Built |
 
 ## Main Verified Theorems
 
