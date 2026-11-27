@@ -8,8 +8,6 @@ on:
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read # Read access to repository contents
-  pages: write # Write access to GitHub Pages
-  id-token: write # Write access to ID tokens
 
 jobs:
   build:
@@ -18,7 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: leanprover/lean-action@v1
-      - uses: leanprover-community/docgen-action@v1
+      - uses: leanprover-community/docgen-action@dacc1acc2a3f532cc577266979ba9c36c7593f7c # v1
+        with:
+          deploy: false
+      - name: Upload documentation artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs/
       - name: Audit axioms of main theorems
         run: |
           lake env lean Cerny/AxiomCheck.lean > axiom-report.txt
@@ -35,3 +40,19 @@ jobs:
             exit 1
           fi
           echo "::notice::Axiom audit passed: only [propext, Classical.choice, Quot.sound]"
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
