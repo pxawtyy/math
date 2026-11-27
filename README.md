@@ -44,3 +44,13 @@ Biblioteca modular em **Lean 4 (v4.36.0) + Mathlib (v4.36.0)** formalizando a te
 lake build
 ```
 
+## Auditoria de Axiomas
+
+O arquivo `Cerny/AxiomCheck.lean` imprime, via `#print axioms`, as dependências
+axiomáticas de todos os teoremas principais. O CI (`lean_action_ci.yml`) executa
+esse relatório e falha caso apareça qualquer axioma fora de
+`[propext, Classical.choice, Quot.sound]`.
+
+```powershell
+lake env lean Cerny/AxiomCheck.lean
+```

@@ -19,3 +19,17 @@ jobs:
       - uses: actions/checkout@v7
       - uses: leanprover/lean-action@v1
       - uses: leanprover-community/docgen-action@v1
+      - name: Audit axioms of main theorems
+        run: |
+          lake env lean Cerny/AxiomCheck.lean > axiom-report.txt
+          cat axiom-report.txt
+          actual="$(grep -c 'depends on axioms:' axiom-report.txt)"
+          if [ "$actual" -ne 10 ]; then
+            echo "::error::Expected 10 audited theorems, found $actual"
+            exit 1
+          fi
+          if grep 'depends on axioms:' axiom-report.txt | grep -vF 'depends on axioms: [propext, Classical.choice, Quot.sound]'; then
+            echo "::error::Unexpected axioms detected in main theorems"
+            exit 1
+          fi
+          echo "::notice::Axiom audit passed: only [propext, Classical.choice, Quot.sound]"
