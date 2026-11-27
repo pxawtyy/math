@@ -34,6 +34,11 @@ combinatorial, and spectral theory of the Černý conjecture, with **zero `sorry
 - `Aperiodic.aperiodic_bound`
 - `BalancedPermutations.prime_order_balanced_cerny`
 - `BalancedPermutations.coprime_step_balanced_cerny`
+- `BalancedPermutations.master_balanced_version_B_span`
+- `BalancedPermutations.balanced_cerny_of_annihilator_and_pos_multiple`
+- `BalancedPermutations.phi4_high_dim_balanced_cerny`
+- `BalancedPermutations.phi6_high_dim_balanced_cerny`
+- `Cerny.OneClusterAnnular.one_cluster_steinberg_bound`
 - `Cerny.OneClusterAnnular.dubuc_circular_bound`
 - `Cerny.OneClusterAnnular.one_cluster_cerny_bound`
 - `Cerny.Counterexamples.two_cluster_34_counterexample`
