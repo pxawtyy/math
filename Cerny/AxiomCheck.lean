@@ -20,7 +20,11 @@ audit seal: any additional axiom makes the check fail.
 #print axioms Cerny.OneClusterAnnular.one_cluster_cerny_bound
 #print axioms Cerny.OneClusterAnnular.dubuc_circular_bound
 #print axioms BalancedPermutations.antisymmetric_balanced_cerny
+#print axioms BalancedPermutations.balanced_cerny_of_annihilator_and_pos_multiple
+#print axioms BalancedPermutations.phi4_high_dim_balanced_cerny
+#print axioms BalancedPermutations.phi6_high_dim_balanced_cerny
 #print axioms WeightedPrimeCycle.one_cluster_prime_bound
+#print axioms Cerny.OneClusterAnnular.one_cluster_steinberg_bound
 #print axioms Cerny.Counterexamples.two_cluster_34_counterexample
 #print axioms Cerny.Counterexamples.balanced_124_counterexample
 #print axioms Cerny.Counterexamples.balanced_16_counterexample
