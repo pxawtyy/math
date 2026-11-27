@@ -175,7 +175,7 @@ theorem multi_cluster_initial_step [Nonempty Q] (hsync : A.IsSync) (a : α)
   let v₀ : Q → (Q → ℚ) := fun c₀ => e c₀ - ((1 : ℚ) / (c : ℚ)) • ones
   have hsum_e_pt : ∀ q : Q, ∑ c₀ ∈ C, e c₀ q = 1 := by
     intro q
-    simp only [e, pullbackLin, LinearMap.coe_mk, AddHom.coe_mk]
+    simp only [e, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk]
     have hmem : A.eval q (List.replicate ℓ a) ∈ C :=
       eval_replicate_mem_cycleStates A a q 0
     rw [Finset.sum_ite_eq]
@@ -191,9 +191,9 @@ theorem multi_cluster_initial_step [Nonempty Q] (hsync : A.IsSync) (a : α)
     have hsum_ec₀ : ∑ q ∈ C, e c₀ q = 1 := by
       obtain ⟨q₀, hq₀C, hq₀_eq⟩ := hinv_ex c₀ hc₀
       rw [Finset.sum_eq_single q₀]
-      · simp [e, pullbackLin, hq₀_eq]
+      · simp [e, pullbackLin, Cerny.Linear.pullbackLin, hq₀_eq]
       · intro q hqC hqq₀
-        simp only [e, pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, ite_eq_right_iff]
+        simp only [e, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, ite_eq_right_iff]
         intro heq
         exact absurd (hbij.injOn hqC hq₀C (heq.trans hq₀_eq.symm)) hqq₀
       · intro hq₀_nC; exact absurd hq₀C hq₀_nC
@@ -217,7 +217,7 @@ theorem multi_cluster_initial_step [Nonempty Q] (hsync : A.IsSync) (a : α)
         simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul, Pi.zero_apply, v₀,
           Pi.sub_apply, ones, mul_one] at hpt
         have he_zero : ∀ x : ↥C', e x.1 q_ref = 0 := fun x => by
-          simp only [e, pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, hq_ref_eq, ite_eq_right_iff]
+          simp only [e, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, hq_ref_eq, ite_eq_right_iff]
           intro h
           have hx_ne : x.1 ≠ c_ref := (Finset.mem_erase.mp x.2).1
           exact absurd h.symm hx_ne
@@ -237,11 +237,11 @@ theorem multi_cluster_initial_step [Nonempty Q] (hsync : A.IsSync) (a : α)
         simp only [mul_sub, Finset.sum_sub_distrib, Finset.sum_mul]
       rw [hsplit, hsum_α, zero_mul, sub_zero] at hpt
       rw [Finset.sum_eq_single x] at hpt
-      · simp only [e, pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, hqx_eq, ↓reduceIte,
+      · simp only [e, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, hqx_eq, ↓reduceIte,
           mul_one] at hpt
         exact hpt
       · intro y _ hyx
-        simp only [e, pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, hqx_eq]
+        simp only [e, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, hqx_eq]
         have hne : x.1 ≠ y.1 := fun h => hyx (Subtype.ext h.symm)
         simp [hne]
       · intro hx_abs; exact absurd (Finset.mem_univ x) hx_abs
@@ -293,7 +293,7 @@ theorem multi_cluster_initial_step [Nonempty Q] (hsync : A.IsSync) (a : α)
       σ_C (pullbackLin A w (v₀ c₀)) =
         ((A.preimage {c₀} (w ++ List.replicate ℓ a) ∩ C).card : ℚ) - 1 := by
     intro w c₀
-    simp only [σ_C, pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, v₀, Pi.sub_apply,
+    simp only [σ_C, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, v₀, Pi.sub_apply,
       Pi.smul_apply, smul_eq_mul, ones, mul_one, e, Finset.sum_sub_distrib, Finset.sum_const,
       nsmul_eq_mul]
     have hpre : ∑ q ∈ C, (if A.eval (A.eval q w) (List.replicate ℓ a) = c₀ then (1 : ℚ) else 0) =
@@ -523,7 +523,7 @@ private lemma one_cluster_prime_extension {Q α : Type*} [Fintype Q] [DecidableE
     obtain ⟨q₀, _, hq₀_eq⟩ := hbij.surjOn (hSC hq_in)
     dsimp only at hq₀_eq
     have hval := congrFun h0 q₀
-    simp only [u_S, pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, f₀, Pi.sub_apply,
+    simp only [u_S, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, f₀, Pi.sub_apply,
       Pi.smul_apply, smul_eq_mul, indS, indC] at hval
     change (if A.eval q₀ (List.replicate (cycleLevel A a) a) ∈ S then (1 : ℚ) else 0) -
       (S.card : ℚ) / (p : ℚ) *
@@ -537,7 +537,7 @@ private lemma one_cluster_prime_extension {Q α : Type*} [Fintype Q] [DecidableE
       σ_C (pullbackLin A w u_S) =
         ((A.preimage S (w ++ List.replicate ℓ a) ∩ C).card : ℚ) - (S.card : ℚ) := by
     intro w
-    simp only [σ_C, pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, u_S, f₀, Pi.sub_apply,
+    simp only [σ_C, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, u_S, f₀, Pi.sub_apply,
       Pi.smul_apply, smul_eq_mul, indS, indC, Finset.sum_sub_distrib, mul_one]
     have h1 : ∑ q ∈ C, (if A.eval (A.eval q w) (List.replicate ℓ a) ∈ S then (1 : ℚ) else 0) =
         ((A.preimage S (w ++ List.replicate ℓ a) ∩ C).card : ℚ) := by
@@ -574,7 +574,7 @@ private lemma one_cluster_prime_extension {Q α : Type*} [Fintype Q] [DecidableE
   have hann : ∑ j ∈ Finset.range p, (T_a ^ j) u_S = 0 := by
     ext q
     simp only [Finset.sum_apply, LinearMap.coe_sum, Pi.zero_apply, hTa_pow]
-    simp only [pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, u_S, ← Aut.eval_append]
+    simp only [pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, u_S, ← Aut.eval_append]
     let q₀ := A.eval q (List.replicate ℓ a)
     have hq₀C : q₀ ∈ C := eval_replicate_mem_cycleStates A a q 0
     have hcomm : ∀ j : ℕ, A.eval (A.eval q (List.replicate j a)) (List.replicate ℓ a) =

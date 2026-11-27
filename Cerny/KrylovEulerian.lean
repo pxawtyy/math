@@ -1,4 +1,5 @@
 import Cerny.Defs
+import Cerny.Linear
 import Mathlib.LinearAlgebra.Dimension.Constructions
 import Mathlib.LinearAlgebra.Dimension.Finrank
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
@@ -22,23 +23,21 @@ namespace KrylovEulerian
 section Krylov
 variable {Q α : Type*} [Fintype Q] [DecidableEq Q] (A : Aut Q α)
 
-/-- Pullback linear operator `T w f p = f (A.eval p w)` on `Q → ℚ`. -/
-def pullbackLin (w : List α) : (Q → ℚ) →ₗ[ℚ] (Q → ℚ) where
-  toFun f p := f (A.eval p w)
-  map_add' _ _ := rfl
-  map_smul' _ _ := rfl
+/-- Pullback linear operator `T w f p = f (A.eval p w)` on `Q → ℚ`.
+This is the specialization of `Cerny.Linear.pullbackLin` to `ℚ`. -/
+abbrev pullbackLin (w : List α) : (Q → ℚ) →ₗ[ℚ] (Q → ℚ) :=
+  Cerny.Linear.pullbackLin ℚ A w
 
-lemma pullbackLin_nil : pullbackLin A [] = LinearMap.id := by
-  ext f p; rfl
+lemma pullbackLin_nil : pullbackLin A [] = LinearMap.id :=
+  Cerny.Linear.pullbackLin_nil ℚ A
 
 lemma pullbackLin_append (u v : List α) :
-    pullbackLin A (u ++ v) = (pullbackLin A u) ∘ₗ (pullbackLin A v) := by
-  ext f p
-  simp [pullbackLin, Aut.eval_append]
+    pullbackLin A (u ++ v) = (pullbackLin A u) ∘ₗ (pullbackLin A v) :=
+  Cerny.Linear.pullbackLin_append ℚ A u v
 
 lemma pullbackLin_cons (a : α) (w : List α) :
     pullbackLin A (a :: w) = (pullbackLin A [a]) ∘ₗ (pullbackLin A w) :=
-  pullbackLin_append A [a] w
+  Cerny.Linear.pullbackLin_cons ℚ A a w
 
 /-- Sum functional `σ f = ∑ q, f q` on `Q → ℚ`. -/
 def sumLin (Q : Type*) [Fintype Q] : (Q → ℚ) →ₗ[ℚ] ℚ where
@@ -96,7 +95,8 @@ theorem krylov_nonconstant_preimage [Nonempty Q] (hsync : A.IsSync)
   have hsum_pull : ∀ w : List α,
       sumLin Q (pullbackLin A w v₀) = ((A.preimage S w).card : ℚ) - (S.card : ℚ) := by
     intro w
-    simp only [sumLin, pullbackLin, LinearMap.coe_mk, AddHom.coe_mk, v₀, Pi.sub_apply,
+    simp only [sumLin, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk,
+      v₀, Pi.sub_apply,
       Pi.smul_apply, smul_eq_mul, indS, ones, mul_one, Finset.sum_sub_distrib, Finset.sum_const,
       Finset.card_univ, nsmul_eq_mul]
     have hpre : ∑ q : Q, (if A.eval q w ∈ S then (1 : ℚ) else 0) =

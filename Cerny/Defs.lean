@@ -207,6 +207,50 @@ lemma isSyncWord_append_right [Nonempty Q] {u v : List α} (hu : A.IsSyncWord u)
   obtain ⟨q₀, hq₀⟩ := hu
   exact ⟨A.eval q₀ v, fun q => by simp [hq₀]⟩
 
+/-- A synchronizing automaton with at least two states has a letter whose transition
+map is not bijective. -/
+lemma exists_nonbijective_letter [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
+    (hn2 : 2 ≤ Fintype.card Q) : ∃ b : α, ¬ Function.Bijective (fun q => A.step q b) := by
+  classical
+  by_contra hall
+  push_neg at hall
+  have hbij_word : ∀ w : List α, Function.Bijective (fun q => A.eval q w) := by
+    intro w
+    induction w with
+    | nil => exact Function.bijective_id
+    | cons b rest ih => exact ih.comp (hall b)
+  obtain ⟨w, hw⟩ := hsync
+  rw [isSyncWord_iff_exists_eval_eq] at hw
+  obtain ⟨q₀, hq₀⟩ := hw
+  obtain ⟨p₁, p₂, hne⟩ := Fintype.exists_pair_of_one_lt_card (by omega : 1 < Fintype.card Q)
+  exact hne ((hbij_word w).injective ((hq₀ p₁).trans (hq₀ p₂).symm))
+
+/-- A synchronizing automaton with at least two states has a letter with a collision
+in its preimage: some state has at least two preimages under that single letter. -/
+lemma exists_collision_letter_of_isSync [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
+    (hn2 : 2 ≤ Fintype.card Q) : ∃ (c₀ : Q) (b : α), 2 ≤ (A.preimage {c₀} [b]).card := by
+  classical
+  obtain ⟨b, hb⟩ := A.exists_nonbijective_letter hsync hn2
+  have hnotinj : ¬ Function.Injective (fun q => A.step q b) := by
+    intro hinj
+    exact hb (Finite.injective_iff_bijective.mp hinj)
+  have hcoll : ∃ p₁ p₂, A.step p₁ b = A.step p₂ b ∧ p₁ ≠ p₂ := by
+    by_contra hcoll
+    apply hnotinj
+    intro p₁ p₂ heq
+    by_contra hne
+    exact hcoll ⟨p₁, p₂, heq, hne⟩
+  obtain ⟨p₁, p₂, heq, hne⟩ := hcoll
+  refine ⟨A.step p₁ b, b, ?_⟩
+  have hsub : ({p₁, p₂} : Finset Q) ⊆ A.preimage {A.step p₁ b} [b] := by
+    intro x hx
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hx
+    rcases hx with rfl | rfl
+    · simp [Aut.mem_preimage]
+    · simp [Aut.mem_preimage, heq]
+  rw [← Finset.card_pair hne]
+  exact Finset.card_le_card hsub
+
 /-- Given a backward chain of preimages from `{q₀}` up to `Finset.univ`,
 the reverse concatenation of the words is a synchronizing word of total length `∑ i, (w i).length`. -/
 lemma isSyncWord_of_chain [Nonempty Q] (k : ℕ) (S : Fin (k + 1) → Finset Q)

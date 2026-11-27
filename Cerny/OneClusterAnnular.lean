@@ -5,6 +5,7 @@ import Mathlib.LinearAlgebra.Dimension.Finrank
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.Tactic
 import Cerny.Defs
+import Cerny.Linear
 import Cerny.WeightedPrimeCycle
 import Cerny.CircularDubuc
 
@@ -32,74 +33,40 @@ section FittingAndOperators
 
 variable {Q α : Type*} [Fintype Q] [DecidableEq Q]
 
-/-- Row-action (pushforward) operator on `Q → ℂ` induced by a word `w`. -/
-noncomputable def rowAct (A : Aut Q α) (w : List α) : (Q → ℂ) →ₗ[ℂ] (Q → ℂ) where
-  toFun f q := ∑ p : Q, if A.eval p w = q then f p else 0
-  map_add' f g := by
-    ext q; simp only [Pi.add_apply, ← Finset.sum_add_distrib]
-    refine Finset.sum_congr rfl (fun p _ => ?_)
-    split_ifs <;> simp
-  map_smul' c f := by
-    ext q; simp only [Pi.smul_apply, smul_eq_mul, RingHom.id_apply, Finset.mul_sum]
-    refine Finset.sum_congr rfl (fun p _ => ?_)
-    split_ifs <;> simp
+/-- Row-action (pushforward) operator on `Q → ℂ` induced by a word `w`.
+This is the specialization of `Cerny.Linear.rowAct` to `ℂ`. -/
+abbrev rowAct (A : Aut Q α) (w : List α) : (Q → ℂ) →ₗ[ℂ] (Q → ℂ) :=
+  Cerny.Linear.rowAct ℂ A w
 
-lemma rowAct_nil (A : Aut Q α) (f : Q → ℂ) : rowAct A [] f = f := by
-  ext q
-  simp only [rowAct, LinearMap.coe_mk, AddHom.coe_mk]
-  change (∑ p : Q, if p = q then f p else 0) = f q
-  rw [Finset.sum_ite_eq']
-  simp
+lemma rowAct_nil (A : Aut Q α) (f : Q → ℂ) : rowAct A [] f = f :=
+  Cerny.Linear.rowAct_nil ℂ A f
 
 lemma rowAct_append (A : Aut Q α) (u v : List α) (f : Q → ℂ) :
-    rowAct A (u ++ v) f = rowAct A v (rowAct A u f) := by
-  ext q
-  simp only [rowAct, LinearMap.coe_mk, AddHom.coe_mk, Aut.eval_append]
-  symm
-  trans ∑ x : Q, ∑ p : Q, if A.eval p u = x ∧ A.eval x v = q then f p else 0
-  · refine Finset.sum_congr rfl (fun x _ => ?_)
-    split_ifs with hx
-    · refine Finset.sum_congr rfl (fun p _ => by simp [hx])
-    · simp [hx]
-  · rw [Finset.sum_comm]
-    refine Finset.sum_congr rfl (fun p _ => ?_)
-    rw [Finset.sum_eq_single (A.eval p u)]
-    · simp
-    · intro x _ hxne
-      simp [hxne.symm]
-    · intro habs; exact absurd (Finset.mem_univ _) habs
+    rowAct A (u ++ v) f = rowAct A v (rowAct A u f) :=
+  Cerny.Linear.rowAct_append ℂ A u v f
 
 lemma rowAct_replicate_succ (A : Aut Q α) (a : α) (k : ℕ) (f : Q → ℂ) :
     rowAct A (List.replicate (k + 1) a) f =
-      rowAct A [a] (rowAct A (List.replicate k a) f) := by
-  rw [List.replicate_succ', rowAct_append]
+      rowAct A [a] (rowAct A (List.replicate k a) f) :=
+  Cerny.Linear.rowAct_replicate_succ ℂ A a k f
 
 lemma rowAct_eq_iterate (A : Aut Q α) (a : α) (k : ℕ) (f : Q → ℂ) :
-    rowAct A (List.replicate k a) f = ((rowAct A [a])^[k]) f := by
-  induction k with
-  | zero => simp [rowAct_nil]
-  | succ k ih => rw [rowAct_replicate_succ, Function.iterate_succ_apply', ih]
+    rowAct A (List.replicate k a) f = ((rowAct A [a])^[k]) f :=
+  Cerny.Linear.rowAct_eq_iterate ℂ A a k f
 
 /-- Standard bilinear pairing on `Q → ℂ`. -/
-noncomputable def dotC (f g : Q → ℂ) : ℂ := ∑ q : Q, f q * g q
+abbrev dotC (f g : Q → ℂ) : ℂ := Cerny.Linear.dot ℂ f g
 
 /-- Indicator vector of a subset `S : Finset Q` in `Q → ℂ`. -/
-noncomputable def indC (S : Finset Q) : Q → ℂ := fun q => if q ∈ S then 1 else 0
+abbrev indC (S : Finset Q) : Q → ℂ := fun q => if q ∈ S then 1 else 0
 
 lemma dotC_rowAct_indC (A : Aut Q α) (w : List α) (f : Q → ℂ) (S : Finset Q) :
-    dotC (rowAct A w f) (indC S) = dotC f (indC (A.preimage S w)) := by
-  simp only [dotC, rowAct, LinearMap.coe_mk, AddHom.coe_mk, indC]
-  trans ∑ q : Q, ∑ p : Q, (if A.eval p w = q then f p else 0) * (if q ∈ S then (1 : ℂ) else 0)
-  · refine Finset.sum_congr rfl (fun q _ => by rw [Finset.sum_mul])
-  rw [Finset.sum_comm]
-  refine Finset.sum_congr rfl (fun p _ => ?_)
-  simp [Aut.mem_preimage, Finset.sum_ite_eq']
+    dotC (rowAct A w f) (indC S) = dotC f (indC (A.preimage S w)) :=
+  Cerny.Linear.dot_rowAct_indicator ℂ A w f S
 
 lemma sum_rowAct (A : Aut Q α) (w : List α) (f : Q → ℂ) :
-    ∑ q : Q, rowAct A w f q = ∑ p : Q, f p := by
-  have h := dotC_rowAct_indC A w f Finset.univ
-  simp only [dotC, indC, Finset.mem_univ, ↓reduceIte, mul_one, Aut.preimage_univ] at h
-  exact h
+    ∑ q : Q, rowAct A w f q = ∑ p : Q, f p :=
+  Cerny.Linear.sum_rowAct ℂ A w f
 
 /-- Primitive `m`-th root of unity `exp(2πi/m)`. -/
 noncomputable def primRoot (m : ℕ) : ℂ :=
@@ -338,8 +305,8 @@ lemma rowAct_a_indC (A : Aut Q α) (a : α) :
     rowAct A [a] (indC (cycleStates A a)) = indC (cycleStates A a) := by
   have hbij := step_a_bijOn_cycleStates A a
   ext q
-  simp only [rowAct, LinearMap.coe_mk, AddHom.coe_mk, indC, Aut.eval, List.foldl_cons,
-    List.foldl_nil]
+  simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk, indC, Aut.eval,
+    List.foldl_cons, List.foldl_nil]
   by_cases hq : q ∈ cycleStates A a
   · simp only [hq, ↓reduceIte]
     obtain ⟨p₀, hp₀C, hp₀eq⟩ := hbij.surjOn hq
@@ -428,7 +395,7 @@ lemma rowAct_replicate_period (A : Aut Q α) (a : α) (h1c : IsOneCluster A a) (
     rowAct A (List.replicate (cycleLevel A a + (cycleStates A a).card) a) f =
       rowAct A (List.replicate (cycleLevel A a) a) f := by
   ext q
-  simp only [rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+  simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
   refine Finset.sum_congr rfl (fun p _ => ?_)
   have hmem : A.eval p (List.replicate (cycleLevel A a) a) ∈ cycleStates A a :=
     eval_replicate_mem_cycleStates A a p 0
@@ -459,7 +426,7 @@ lemma rowAct_replicate_period_of_mem (A : Aut Q α) (a : α) (h1c : IsOneCluster
     rowAct A (List.replicate (cycleStates A a).card a) f = f := by
   rcases hf with ⟨g, rfl⟩
   ext q
-  simp only [rowAct, LinearMap.coe_mk, AddHom.coe_mk, projC]
+  simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk, projC]
   by_cases hq : q ∈ cycleStates A a
   · simp only [hq, ↓reduceIte]
     rw [Finset.sum_eq_single q]
@@ -533,7 +500,7 @@ lemma eigProj_zero_mem_span (A : Aut Q α) (a : α) (h1c : IsOneCluster A a) (f 
   by_cases hq : q ∈ C
   · simp only [hq, ↓reduceIte, mul_one, one_div, div_eq_inv_mul]
     congr 1
-    simp only [rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+    simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
     rw [Finset.sum_comm]
     refine Finset.sum_congr rfl (fun p _ => ?_)
     have hp_mem : A.eval p (List.replicate ℓ a) ∈ C :=
@@ -560,7 +527,7 @@ lemma eigProj_zero_mem_span (A : Aut Q α) (a : α) (h1c : IsOneCluster A a) (f 
   · simp only [hq, ↓reduceIte, mul_zero, mul_eq_zero]
     right
     refine Finset.sum_eq_zero (fun j _ => ?_)
-    simp only [rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+    simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
     refine Finset.sum_eq_zero (fun p _ => ?_)
     split_ifs with heq
     · have hp_mem : A.eval p (List.replicate (ℓ + j.1) a) ∈ C :=
@@ -748,7 +715,7 @@ lemma eigProj_range_le_of_mem_ne_zero [Nonempty Q] (A : Aut Q α) (a : α)
       suffices h0 : ∀ j : Fin m, (rowAct A (List.replicate (ℓ' + j.1) a) u) q = 0 by
         rw [Finset.sum_eq_zero (fun j _ => by rw [h0 j, mul_zero]), mul_zero]
       intro j
-      simp only [rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+      simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
       refine Finset.sum_eq_zero (fun p _ => ?_)
       split_ifs with heq
       · have hsplit : ℓ' + j.1 = ℓ + ((ℓ' - ℓ) + j.1) := by omega
@@ -764,7 +731,7 @@ lemma eigProj_range_le_of_mem_ne_zero [Nonempty Q] (A : Aut Q α) (a : α)
     have hbij_j := eval_replicate_injOn_cycleStates A a j
     have hrow_eq : rowAct A (List.replicate j a) (eigProj A a C ℓ' r u)
         (A.eval c₀ (List.replicate j a)) = eigProj A a C ℓ' r u c₀ := by
-      simp only [rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+      simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
       rw [Finset.sum_eq_single c₀]
       · simp
       · intro p _ hpne
@@ -1355,9 +1322,9 @@ theorem one_cluster_annular_extension
   let φ : (Q → ℂ) →ₗ[ℂ] ℂ :=
     { toFun := fun f => dotC f (indC S) - ((c : ℂ) / (m : ℂ)) * (∑ q : Q, f q)
       map_add' := fun f g => by
-        simp only [dotC, Pi.add_apply, add_mul, Finset.sum_add_distrib]; ring
+        simp only [dotC, Cerny.Linear.dot, Pi.add_apply, add_mul, Finset.sum_add_distrib]; ring
       map_smul' := fun k f => by
-        simp only [dotC, Pi.smul_apply, smul_eq_mul, RingHom.id_apply, mul_assoc,
+        simp only [dotC, Cerny.Linear.dot, Pi.smul_apply, smul_eq_mul, RingHom.id_apply, mul_assoc,
           ← Finset.mul_sum]
         ring }
   let ψ : (Q → ℂ) →ₗ[ℂ] ℂ := φ.comp (rowAct A (List.replicate ℓ a))
@@ -1368,7 +1335,7 @@ theorem one_cluster_annular_extension
     rw [← rowAct_append, dotC_rowAct_indC, sum_rowAct, hvC_sum]
     have hdot : dotC vC (indC (A.preimage S (w ++ List.replicate ℓ a))) =
         ((A.preimage S (w ++ List.replicate ℓ a) ∩ C).card : ℂ) := by
-      simp only [dotC, vC, indC]
+      simp only [dotC, Cerny.Linear.dot, vC, indC]
       trans ∑ q : Q, if q ∈ A.preimage S (w ++ List.replicate ℓ a) ∩ C then (1 : ℂ) else 0
       · refine Finset.sum_congr rfl (fun q _ => ?_)
         by_cases h1 : q ∈ C <;> by_cases h2 : q ∈ A.preimage S (w ++ List.replicate ℓ a) <;>
@@ -1416,7 +1383,7 @@ theorem one_cluster_annular_extension
   have hφ_vC : φ vC = 0 := by
     dsimp only [φ, LinearMap.coe_mk, AddHom.coe_mk]
     have hdot : dotC vC (indC S) = (c : ℂ) := by
-      simp only [dotC, vC, indC]
+      simp only [dotC, Cerny.Linear.dot, vC, indC]
       trans ∑ q : Q, if q ∈ S ∩ C then (1 : ℂ) else 0
       · refine Finset.sum_congr rfl (fun q _ => ?_)
         by_cases h1 : q ∈ C <;> by_cases h2 : q ∈ S <;> simp [h1, h2]

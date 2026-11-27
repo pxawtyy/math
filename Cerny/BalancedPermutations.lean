@@ -9,6 +9,8 @@ import Mathlib.RingTheory.Polynomial.Cyclotomic.Eval
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Cerny.Defs
+import Cerny.Linear
+import Cerny.CircularDubuc
 import Cerny.KrylovEulerian
 
 /-!
@@ -38,51 +40,22 @@ open KrylovEulerian
 section RightAction
 variable {Q α : Type*} [Fintype Q] [DecidableEq Q]
 
-/-- Right-action pushforward operator `(R A w x) q = ∑_{p · w = q} x p` on `Q → ℚ`. -/
-def R (A : Aut Q α) (w : List α) : (Q → ℚ) →ₗ[ℚ] (Q → ℚ) where
-  toFun x q := ∑ p ∈ Finset.univ.filter (fun p => A.eval p w = q), x p
-  map_add' x y := by ext q; simp [Finset.sum_add_distrib]
-  map_smul' c x := by ext q; simp [Finset.mul_sum]
+/-- Right-action pushforward operator `(R A w x) q = ∑_{p · w = q} x p` on `Q → ℚ`.
+This is the specialization of `Cerny.Linear.rowAct` to `ℚ`. -/
+abbrev R (A : Aut Q α) (w : List α) : (Q → ℚ) →ₗ[ℚ] (Q → ℚ) :=
+  Cerny.Linear.rowAct ℚ A w
 
 @[simp]
 lemma R_nil (A : Aut Q α) : R A [] = LinearMap.id := by
-  apply LinearMap.ext; intro x; ext q
-  change (∑ p ∈ Finset.univ.filter (fun p => A.eval p [] = q), x p) = x q
-  rw [Finset.sum_filter]; simp only [Aut.eval_nil]
-  rw [Finset.sum_eq_single q]
-  · simp
-  · intro p _ hpq; simp [hpq]
-  · intro hq; exact absurd (Finset.mem_univ q) hq
+  apply LinearMap.ext
+  intro f
+  exact Cerny.Linear.rowAct_nil ℚ A f
 
 lemma R_append (A : Aut Q α) (u v : List α) :
     R A (u ++ v) = R A v ∘ₗ R A u := by
-  apply LinearMap.ext; intro x; ext q
-  simp only [R, LinearMap.coe_mk, AddHom.coe_mk, LinearMap.comp_apply]
-  have hpart : ∀ r : Q,
-      (Finset.univ.filter (fun p => A.eval p (u ++ v) = q)).filter (fun p => A.eval p u = r) =
-        if A.eval r v = q then Finset.univ.filter (fun p => A.eval p u = r) else ∅ := by
-    intro r
-    split_ifs with hr
-    · ext p; simp only [Finset.mem_filter, Finset.mem_univ, true_and, Aut.eval_append,
-        and_iff_right_iff_imp]; intro hpu; rw [hpu, hr]
-    · ext p; simp only [Finset.mem_filter, Finset.mem_univ, true_and, Aut.eval_append,
-        Finset.notMem_empty, iff_false, not_and]; intro hpuv hpu; rw [hpu] at hpuv; exact hr hpuv
-  calc ∑ p ∈ Finset.univ.filter (fun p => A.eval p (u ++ v) = q), x p
-      = ∑ p ∈ Finset.univ.filter (fun p => A.eval p (u ++ v) = q),
-          ∑ r ∈ Finset.univ, (if A.eval p u = r then x p else 0) :=
-          Finset.sum_congr rfl fun _ _ => by simp
-    _ = ∑ r ∈ Finset.univ, ∑ p ∈ Finset.univ.filter (fun p => A.eval p (u ++ v) = q),
-          (if A.eval p u = r then x p else 0) := Finset.sum_comm
-    _ = ∑ r ∈ Finset.univ, ∑ p ∈ (Finset.univ.filter (fun p => A.eval p (u ++ v) = q)).filter
-          (fun p => A.eval p u = r), x p :=
-          Finset.sum_congr rfl fun _ _ => by simp only [Finset.sum_filter]
-    _ = ∑ r ∈ Finset.univ,
-          (if A.eval r v = q then ∑ p ∈ Finset.univ.filter (fun p => A.eval p u = r), x p
-           else 0) :=
-          Finset.sum_congr rfl fun r _ => by rw [hpart r]; split_ifs <;> simp
-    _ = ∑ r ∈ Finset.univ.filter (fun r => A.eval r v = q),
-          ∑ p ∈ Finset.univ.filter (fun p => A.eval p u = r), x p := by
-          rw [Finset.sum_filter]
+  apply LinearMap.ext
+  intro f
+  exact Cerny.Linear.rowAct_append ℚ A u v f
 
 lemma R_cons (A : Aut Q α) (a : α) (w : List α) :
     R A (a :: w) = R A w ∘ₗ R A [a] := by
@@ -109,13 +82,8 @@ abbrev K₀ (Q : Type*) [Fintype Q] : Submodule ℚ (Q → ℚ) :=
 
 lemma sumLin_R (A : Aut Q α) (w : List α) (x : Q → ℚ) :
     sumLin Q (R A w x) = sumLin Q x := by
-  simp only [sumLin, R, LinearMap.coe_mk, AddHom.coe_mk]
-  calc ∑ q ∈ Finset.univ, ∑ p ∈ Finset.univ.filter (fun p => A.eval p w = q), x p
-      = ∑ q ∈ Finset.univ, ∑ p ∈ Finset.univ, (if A.eval p w = q then x p else 0) :=
-          Finset.sum_congr rfl fun _ _ => by rw [Finset.sum_filter]
-    _ = ∑ p ∈ Finset.univ, ∑ q ∈ Finset.univ, (if A.eval p w = q then x p else 0) :=
-          Finset.sum_comm
-    _ = ∑ p ∈ Finset.univ, x p := Finset.sum_congr rfl fun _ _ => by simp
+  change (∑ q : Q, (Cerny.Linear.rowAct ℚ A w x) q) = ∑ q : Q, x q
+  exact Cerny.Linear.sum_rowAct ℚ A w x
 
 /-- Defect row vector `ρ A w = R A w 1 - 1 ∈ K₀ Q`. -/
 def ρ (A : Aut Q α) (w : List α) : Q → ℚ :=
@@ -124,25 +92,17 @@ def ρ (A : Aut Q α) (w : List α) : Q → ℚ :=
 lemma ρ_eq_R_ones_sub (A : Aut Q α) (w : List α) :
     ρ A w = R A w (fun _ => 1) - (fun _ => 1) := by
   ext q
-  simp only [ρ, R, LinearMap.coe_mk, AddHom.coe_mk, Pi.sub_apply, Finset.sum_const, nsmul_eq_mul,
-    mul_one]
-  congr 1
-  exact congrArg (Nat.cast : ℕ → ℚ) (by congr 1; ext p; simp [Aut.mem_preimage])
+  simp only [ρ, Pi.sub_apply]
+  rw [show (R A w) (fun _ => (1 : ℚ)) q = ((A.preimage {q} w).card : ℚ) from
+    Cerny.Linear.rowAct_one_apply ℚ A w q]
 
 lemma ρ_mem_K0 (A : Aut Q α) (w : List α) : ρ A w ∈ K₀ Q := by
   rw [LinearMap.mem_ker, ρ_eq_R_ones_sub, map_sub, sumLin_R, sub_self]
 
 lemma R_ones_eq_ones_of_bij (A : Aut Q α) {a : α}
     (hbij : Function.Bijective (fun q => A.step q a)) :
-    R A [a] (fun _ => 1) = (fun _ => 1) := by
-  ext q
-  simp only [R, LinearMap.coe_mk, AddHom.coe_mk, Finset.sum_const, nsmul_eq_mul, mul_one]
-  obtain ⟨p₀, hp₀⟩ := hbij.surjective q
-  have hsing : Finset.univ.filter (fun p => A.eval p [a] = q) = {p₀} := by
-    ext p
-    rw [Finset.mem_filter, Finset.mem_singleton, Aut.eval_singleton]
-    exact ⟨fun h => hbij.injective (h.2.trans hp₀.symm), fun h => ⟨Finset.mem_univ p, h ▸ hp₀⟩⟩
-  rw [hsing, Finset.card_singleton, Nat.cast_one]
+    R A [a] (fun _ => 1) = (fun _ => 1) :=
+  Cerny.Linear.rowAct_ones_eq_ones_of_bij ℚ A hbij
 
 lemma ρ_a_eq_zero_of_bij (A : Aut Q α) {a : α}
     (hbij : Function.Bijective (fun q => A.step q a)) :
@@ -226,72 +186,62 @@ lemma K₀'_R_a_inv (A : Aut Q α) {a : α}
   | add _ _ _ _ ih1 ih2 => rw [map_add]; exact Submodule.add_mem _ ih1 ih2
   | smul c _ _ ih => rw [map_smul]; exact Submodule.smul_mem _ c ih
 
+/-- If `A` is synchronizing, `a` is bijective and `2 ≤ |Q|`, then some letter `b ≠ a`
+has nonzero defect `ρ A [b]`. -/
+lemma exists_defect_letter_of_isSync [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
+    (a : α) (hbij : Function.Bijective (fun q => A.step q a))
+    (hn2 : 2 ≤ Fintype.card Q) : ∃ b : α, b ≠ a ∧ ρ A [b] ≠ 0 := by
+  classical
+  obtain ⟨b, hb⟩ := A.exists_nonbijective_letter hsync hn2
+  refine ⟨b, ?_, ?_⟩
+  · intro hba
+    subst hba
+    exact hb hbij
+  · intro hρ0
+    apply hb
+    have hsurj : Function.Surjective (fun q => A.step q b) := by
+      intro q
+      have hq := congrFun hρ0 q
+      simp only [ρ, Pi.zero_apply, sub_eq_zero] at hq
+      have hcard : (A.preimage {q} [b]).card = 1 := by exact_mod_cast hq
+      obtain ⟨p, hp⟩ := Finset.card_pos.mp (by omega : 0 < (A.preimage {q} [b]).card)
+      exact ⟨p, by simpa [Aut.mem_preimage] using hp⟩
+    exact Finite.surjective_iff_bijective.mp hsurj
+
+/-- The right-Krylov subspace `K₀' A a` is nontrivial for a synchronizing automaton
+with at least two states and a bijective letter `a`. -/
+lemma K₀'_ne_bot_of_isSync [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
+    (a : α) (hbij : Function.Bijective (fun q => A.step q a))
+    (hn2 : 2 ≤ Fintype.card Q) : K₀' A a ≠ ⊥ := by
+  intro hbot
+  obtain ⟨b, hba, hρ⟩ := exists_defect_letter_of_isSync A hsync a hbij hn2
+  have hmem : ρ A [b] ∈ K₀' A a := Submodule.subset_span ⟨b, 0, hba, by simp⟩
+  rw [hbot, Submodule.mem_bot] at hmem
+  exact hρ hmem
+
+lemma one_le_finrank_K₀'_of_isSync [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
+    (a : α) (hbij : Function.Bijective (fun q => A.step q a))
+    (hn2 : 2 ≤ Fintype.card Q) : 1 ≤ Module.finrank ℚ (K₀' A a) := by
+  have hne := K₀'_ne_bot_of_isSync A hsync a hbij hn2
+  have hlt := Submodule.finrank_lt_finrank_of_lt (bot_lt_iff_ne_bot.mpr hne)
+  rw [finrank_bot] at hlt
+  omega
+
 /-- Quotient-free Cayley–Hamilton over `ℚ`: inside an `T`-invariant subspace `W` of dimension `d`,
-every orbit `(T^[k]) x` lies in `span { (T^[j]) x | j < d }`. -/
+every orbit `(T^[k]) x` lies in `span { (T^[j]) x | j < d }`. This is the specialization of
+`Cerny.CircularDubuc.span_orbit_mod_subspace` to the quotient by `⊥`. -/
 lemma span_orbit_le_finrank_Q {V : Type*} [AddCommGroup V] [Module ℚ V] [FiniteDimensional ℚ V]
     (T : V →ₗ[ℚ] V) (W : Submodule ℚ V) (hTW : ∀ x ∈ W, T x ∈ W)
     (x : V) (hx : x ∈ W) (k : ℕ) :
     (T^[k]) x ∈ Submodule.span ℚ {y | ∃ j < Module.finrank ℚ W, y = (T^[j]) x} := by
-  let d := Module.finrank ℚ W
-  let S : ℕ → Submodule ℚ V := fun t => Submodule.span ℚ {y | ∃ j < t, y = (T^[j]) x}
-  have hS0 : S 0 = ⊥ := by simp [S]
-  have hSmono : ∀ t, S t ≤ S (t + 1) := fun t =>
-    Submodule.span_mono (by rintro _ ⟨j, hj, rfl⟩; exact ⟨j, by omega, rfl⟩)
-  have hSW : ∀ t, S t ≤ W := by
-    intro t; rw [Submodule.span_le]
-    rintro _ ⟨j, hj, rfl⟩
-    clear hj
-    induction j with
-    | zero => exact hx
-    | succ j ih => rw [Function.iterate_succ_apply']; exact hTW _ ih
-  have hTstep : ∀ t (v : V), v ∈ S t → T v ∈ S (t + 1) := by
-    intro t v hv
-    induction hv using Submodule.span_induction with
-    | mem y hy =>
-      rcases hy with ⟨j, hj, rfl⟩
-      rw [← Function.iterate_succ_apply' T j x]
-      exact Submodule.subset_span ⟨j + 1, by omega, rfl⟩
-    | zero => simp
-    | add _ _ _ _ ih1 ih2 => rw [map_add]; exact Submodule.add_mem _ ih1 ih2
-    | smul c _ _ ih => rw [map_smul]; exact Submodule.smul_mem _ c ih
-  by_cases hstab : ∃ t < d, S t = S (t + 1)
-  · obtain ⟨t, htd, hEq⟩ := hstab
-    have hinv : ∀ v ∈ S t, T v ∈ S t := fun v hv => hEq ▸ hTstep t v hv
-    have hx_in : x ∈ S t := hEq ▸ Submodule.subset_span ⟨0, Nat.zero_lt_succ t, rfl⟩
-    have hle : S t ≤ S d := by
-      have hrec : ∀ m, t ≤ m → S t ≤ S m := by
-        intro m hm
-        induction m with
-        | zero =>
-          have ht0 : t = 0 := by omega
-          rw [ht0]
-        | succ m ihm =>
-          rcases eq_or_lt_of_le hm with rfl | hlt
-          · exact le_rfl
-          · exact le_trans (ihm (by omega)) (hSmono m)
-      exact hrec d (le_of_lt htd)
-    apply hle
-    induction k with
-    | zero => exact hx_in
-    | succ k ih => rw [Function.iterate_succ_apply']; exact hinv _ ih
-  · push_neg at hstab
-    have hgrow : ∀ m ≤ d, m ≤ Module.finrank ℚ (S m) := by
-      intro m hm
-      induction m with
-      | zero => simp [hS0]
-      | succ m ihm =>
-        have hlt := Submodule.finrank_lt_finrank_of_lt
-          (lt_of_le_of_ne (hSmono m) (hstab m (by omega)))
-        have := ihm (by omega)
-        omega
-    have hSd_eq : S d = W :=
-      Submodule.eq_of_le_of_finrank_eq (hSW d)
-        (le_antisymm (Submodule.finrank_mono (hSW d)) (hgrow d le_rfl))
-    change (T^[k]) x ∈ S d
-    rw [hSd_eq]
-    induction k with
-    | zero => exact hx
-    | succ k ih => rw [Function.iterate_succ_apply']; exact hTW _ ih
+  have hbot : ∀ y ∈ (⊥ : Submodule ℚ V), T y ∈ (⊥ : Submodule ℚ V) := by
+    intro y hy
+    rw [Submodule.mem_bot] at hy ⊢
+    rw [hy]
+    simp
+  have h := Cerny.CircularDubuc.span_orbit_mod_subspace T (⊥ : Submodule ℚ V) W bot_le
+    hbot hTW x hx k
+  simpa [finrank_bot] using h
 
 end RightAction
 
@@ -311,32 +261,8 @@ lemma cerny_of_n_extensible [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
     exact ⟨[], Aut.isSyncWord_nil_of_subsingleton A, by simp⟩
   have hn2 : 2 ≤ n := by omega
   -- Step 1: some letter `b₀` is not injective, giving `|{c₀} · b₀⁻¹| ≥ 2` in length `1`
-  have hinit : ∃ c₀ : Q, ∃ b₀ : α, 2 ≤ (A.preimage {c₀} [b₀]).card := by
-    by_contra hall
-    push_neg at hall
-    have hbij_all : ∀ b : α, Function.Bijective (fun q => A.step q b) := by
-      intro b
-      have hinj : Function.Injective (fun q => A.step q b) := by
-        intro p₁ p₂ hEq
-        by_contra hne
-        have hsub : ({p₁, p₂} : Finset Q) ⊆ A.preimage {A.step p₁ b} [b] := by
-          intro x hx
-          simp only [Finset.mem_insert, Finset.mem_singleton] at hx
-          rcases hx with rfl | rfl <;> simp [Aut.mem_preimage, hEq]
-        have h2 : 2 ≤ (A.preimage {A.step p₁ b} [b]).card := by
-          rw [← Finset.card_pair hne]; exact Finset.card_le_card hsub
-        have := hall (A.step p₁ b) b; omega
-      exact Finite.injective_iff_bijective.mp hinj
-    have hbij_word : ∀ w : List α, Function.Bijective (fun q => A.eval q w) := by
-      intro w
-      induction w with
-      | nil => exact Function.bijective_id
-      | cons b rest ih => exact ih.comp (hbij_all b)
-    obtain ⟨w, hw⟩ := hsync
-    rw [Aut.isSyncWord_iff_exists_eval_eq] at hw
-    obtain ⟨q₀, hq₀⟩ := hw
-    obtain ⟨p₁, p₂, hne⟩ := Fintype.exists_pair_of_one_lt_card (by omega : 1 < Fintype.card Q)
-    exact hne ((hbij_word w).injective ((hq₀ p₁).trans (hq₀ p₂).symm))
+  have hinit : ∃ c₀ : Q, ∃ b₀ : α, 2 ≤ (A.preimage {c₀} [b₀]).card :=
+    A.exists_collision_letter_of_isSync hsync (by simpa [n] using hn2)
   obtain ⟨c₀, b₀, hc₀_card⟩ := hinit
   let S₁ := A.preimage {c₀} [b₀]
   have hgrow : ∀ d : ℕ, ∀ S : Finset Q, ∀ v : List α,
@@ -659,35 +585,8 @@ theorem master_balanced_version_B [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
       S.card < (A.preimage S w).card := by
   let d₀ := Module.finrank ℚ (K₀' A a)
   have hd₀_pos : 1 ≤ d₀ := by
-    -- Since `A` is synchronizing and `1 ≤ |S| < n` (so `n ≥ 2`), some letter `b₀ ≠ a` has `ρ [b₀] ≠ 0`
-    have hne_bot : K₀' A a ≠ ⊥ := by
-      intro hbot
-      have hbij_all : ∀ b : α, Function.Bijective (fun q => A.step q b) := by
-        intro b
-        by_cases hba : b = a
-        · subst hba; exact hbij
-        · have hρ0 : ρ A [b] = 0 := by
-            have hmem : ρ A [b] ∈ K₀' A a := ρ_single_mem_K₀' A hbij b
-            rw [hbot, Submodule.mem_bot] at hmem; exact hmem
-          have hsurj : Function.Surjective (fun q => A.step q b) := by
-            intro q
-            have hq := congrFun hρ0 q
-            simp only [ρ, Pi.zero_apply, sub_eq_zero] at hq
-            have hcard1 : (A.preimage {q} [b]).card = 1 := by exact_mod_cast hq
-            obtain ⟨p, hp⟩ := Finset.card_pos.mp (by omega : 0 < (A.preimage {q} [b]).card)
-            exact ⟨p, by simpa [Aut.mem_preimage] using hp⟩
-          exact Finite.surjective_iff_bijective.mp hsurj
-      have hbij_word : ∀ w : List α, Function.Bijective (fun q => A.eval q w) := by
-        intro w; induction w with
-        | nil => exact Function.bijective_id
-        | cons b rest ih => exact ih.comp (hbij_all b)
-      obtain ⟨w, hw⟩ := hsync
-      rw [Aut.isSyncWord_iff_exists_eval_eq] at hw
-      obtain ⟨q₀, hq₀⟩ := hw
-      obtain ⟨p₁, p₂, hne⟩ := Fintype.exists_pair_of_one_lt_card (by omega : 1 < Fintype.card Q)
-      exact hne ((hbij_word w).injective ((hq₀ p₁).trans (hq₀ p₂).symm))
-    have hlt := Submodule.finrank_lt_finrank_of_lt (bot_lt_iff_ne_bot.mpr hne_bot)
-    rw [finrank_bot] at hlt; omega
+    change 1 ≤ Module.finrank ℚ (K₀' A a)
+    exact one_le_finrank_K₀'_of_isSync A hsync a hbij (by omega : 2 ≤ Fintype.card Q)
   -- By `span_orbit_le_finrank_Q`, `{ρ(b · a^j) | b ≠ a, j ≤ d₀ - 1}` spans `K₀' A a`!
   have hspan : K₀' A a ≤ Submodule.span ℚ
       {x | ∃ (b : α) (j : ℕ), b ≠ a ∧ j ≤ d₀ - 1 ∧ x = ρ A (b :: List.replicate j a)} := by
@@ -782,7 +681,8 @@ lemma sum_orbit_annihilates_K₀' (A : Aut Q α) (a : α) (L : ℕ) (hL : 1 ≤ 
   have hgen : ∀ b : α, ∑ j : Fin L, R A (List.replicate j.1 a) (ρ A [b]) = 0 := by
     intro b
     ext q
-    simp only [Finset.sum_apply, Pi.zero_apply, R, LinearMap.coe_mk, AddHom.coe_mk]
+    simp only [Finset.sum_apply, Pi.zero_apply, R, Cerny.Linear.rowAct, LinearMap.coe_mk,
+      AddHom.coe_mk]
     have hbij_j : ∀ j : ℕ, Function.Bijective (fun p => A.eval p (List.replicate j a)) := by
       intro j; induction j with
       | zero => exact Function.bijective_id
@@ -878,10 +778,8 @@ lemma sum_orbit_annihilates_K₀' (A : Aut Q α) (a : α) (L : ℕ) (hL : 1 ≤ 
           rw [hL_mod, add_zero, Nat.mod_mod, Nat.mod_eq_of_lt hjlt]
         rw [hsum_mod, hj']
     -- Swap sums and pull out `cnt q`!
-    calc ∑ j : Fin L, ∑ p ∈ Finset.univ.filter (fun p => A.eval p (List.replicate j.1 a) = q), ρ A [b] p
-        = ∑ j : Fin L, ∑ p : Q, (if A.eval p (List.replicate j.1 a) = q then ρ A [b] p else 0) :=
-          Finset.sum_congr rfl fun _ _ => by rw [Finset.sum_filter]
-      _ = ∑ p : Q, ∑ j : Fin L, (if A.eval p (List.replicate j.1 a) = q then ρ A [b] p else 0) :=
+    calc ∑ j : Fin L, ∑ p : Q, (if A.eval p (List.replicate j.1 a) = q then ρ A [b] p else 0)
+        = ∑ p : Q, ∑ j : Fin L, (if A.eval p (List.replicate j.1 a) = q then ρ A [b] p else 0) :=
           Finset.sum_comm
       _ = ∑ p : Q, (cnt p : ℚ) * ρ A [b] p := by
           refine Finset.sum_congr rfl fun p _ => ?_
@@ -926,31 +824,8 @@ theorem prime_order_balanced_cerny [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync
   -- Step 1: `p - 1 ≤ dim K₀' A a` via irreducibility of `Φ_p` over `ℚ`
   have hdim_ge : p - 1 ≤ Module.finrank ℚ (K₀' A a) := by
     -- Find `b₀ ≠ a` with `ρ A [b₀] ≠ 0`
-    have hex_b₀ : ∃ b₀ : α, b₀ ≠ a ∧ ρ A [b₀] ≠ 0 := by
-      by_contra hall
-      push_neg at hall
-      have hbij_all : ∀ b : α, Function.Bijective (fun q => A.step q b) := by
-        intro b
-        by_cases hba : b = a
-        · subst hba; exact hbal.1
-        · have hρ0 := hall b hba
-          have hsurj : Function.Surjective (fun q => A.step q b) := by
-            intro q
-            have hq := congrFun hρ0 q
-            simp only [ρ, Pi.zero_apply, sub_eq_zero] at hq
-            have hc1 : (A.preimage {q} [b]).card = 1 := by exact_mod_cast hq
-            obtain ⟨x, hx⟩ := Finset.card_pos.mp (by omega : 0 < (A.preimage {q} [b]).card)
-            exact ⟨x, by simpa [Aut.mem_preimage] using hx⟩
-          exact Finite.surjective_iff_bijective.mp hsurj
-      have hbij_word : ∀ w : List α, Function.Bijective (fun q => A.eval q w) := by
-        intro w; induction w with
-        | nil => exact Function.bijective_id
-        | cons b rest ih => exact ih.comp (hbij_all b)
-      obtain ⟨w, hw⟩ := hsync
-      rw [Aut.isSyncWord_iff_exists_eval_eq] at hw
-      obtain ⟨q₀, hq₀⟩ := hw
-      obtain ⟨p₁, p₂, hne⟩ := Fintype.exists_pair_of_one_lt_card (by omega : 1 < Fintype.card Q)
-      exact hne ((hbij_word w).injective ((hq₀ p₁).trans (hq₀ p₂).symm))
+    have hex_b₀ : ∃ b₀ : α, b₀ ≠ a ∧ ρ A [b₀] ≠ 0 :=
+      exists_defect_letter_of_isSync A hsync a hbal.1 (by omega : 2 ≤ Fintype.card Q)
     obtain ⟨b₀, hb₀a, hρ_ne⟩ := hex_b₀
     let Ra : (Q → ℚ) →ₗ[ℚ] (Q → ℚ) := R A [a]
     let v₀ : Q → ℚ := ρ A [b₀]
@@ -1080,7 +955,7 @@ theorem coprime_step_balanced_cerny [Nonempty Q] (A : Aut Q α) (hsync : A.IsSyn
         R A (List.replicate j a) (fun q => if q = x then (1 : ℚ) else 0) =
           (fun q => if q = A.eval x (List.replicate j a) then 1 else 0) := by
       intro j x; ext q
-      simp only [R, LinearMap.coe_mk, AddHom.coe_mk, Finset.sum_filter]
+      simp only [R, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
       rw [Finset.sum_eq_single x]
       · simp [eq_comm]
       · intro p _ hpx; simp [hpx]
@@ -1188,35 +1063,8 @@ theorem antisymmetric_balanced_cerny [Nonempty Q] (A : Aut Q α) (hsync : A.IsSy
     | zero => simp
     | add _ _ _ _ ih1 ih2 => rw [map_add, ih1, ih2, neg_add]
     | smul c _ _ ih => rw [map_smul, ih, smul_neg]
-  have hd₀_pos : 1 ≤ Module.finrank ℚ (K₀' A a) := by
-    have hne_bot : K₀' A a ≠ ⊥ := by
-      intro hbot
-      have hbij_all : ∀ b : α, Function.Bijective (fun q => A.step q b) := by
-        intro b
-        by_cases hba : b = a
-        · subst hba; exact hbij
-        · have hρ0 : ρ A [b] = 0 := by
-            have hmem : ρ A [b] ∈ K₀' A a := ρ_single_mem_K₀' A hbij b
-            rw [hbot, Submodule.mem_bot] at hmem; exact hmem
-          have hsurj : Function.Surjective (fun q => A.step q b) := by
-            intro q
-            have hq := congrFun hρ0 q
-            simp only [ρ, Pi.zero_apply, sub_eq_zero] at hq
-            have hc1 : (A.preimage {q} [b]).card = 1 := by exact_mod_cast hq
-            obtain ⟨x, hx⟩ := Finset.card_pos.mp (by omega : 0 < (A.preimage {q} [b]).card)
-            exact ⟨x, by simpa [Aut.mem_preimage] using hx⟩
-          exact Finite.surjective_iff_bijective.mp hsurj
-      have hbij_word : ∀ w : List α, Function.Bijective (fun q => A.eval q w) := by
-        intro w; induction w with
-        | nil => exact Function.bijective_id
-        | cons b rest ih => exact ih.comp (hbij_all b)
-      obtain ⟨w, hw⟩ := hsync
-      rw [Aut.isSyncWord_iff_exists_eval_eq] at hw
-      obtain ⟨q₀, hq₀⟩ := hw
-      obtain ⟨p₁, p₂, hne⟩ := Fintype.exists_pair_of_one_lt_card (by omega : 1 < Fintype.card Q)
-      exact hne ((hbij_word w).injective ((hq₀ p₁).trans (hq₀ p₂).symm))
-    have hlt := Submodule.finrank_lt_finrank_of_lt (bot_lt_iff_ne_bot.mpr hne_bot)
-    rw [finrank_bot] at hlt; omega
+  have hd₀_pos : 1 ≤ Module.finrank ℚ (K₀' A a) :=
+    one_le_finrank_K₀'_of_isSync A hsync a hbij (by omega : 2 ≤ Fintype.card Q)
   let c : Fin 2 → ℚ := fun _ => (1 : ℚ) / 2
   have hc_pos : ∀ j : Fin 2, 0 < c j := fun _ => by norm_num [c]
   have hc_sum : ∑ j : Fin 2, c j = 1 := by simp [Fin.sum_univ_two, c]

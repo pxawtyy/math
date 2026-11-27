@@ -1,4 +1,5 @@
 import Cerny.Defs
+import Cerny.Linear
 import Cerny.Reduction
 import Cerny.CernyLowerBound
 import Cerny.Monotonic

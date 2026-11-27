@@ -1,5 +1,3 @@
-import Mathlib.Analysis.SpecialFunctions.Complex.Circle
-import Mathlib.Data.Complex.Basic
 import Mathlib.Data.Finset.Card
 import Mathlib.LinearAlgebra.Dimension.Finrank
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
@@ -11,24 +9,26 @@ open scoped BigOperators
 
 namespace Cerny.CircularDubuc
 
+variable {𝕜 : Type*} [Field 𝕜]
+
 /-! ### 1. Annular Cancellation Identity by Pure Induction (No Polynomials / No Lagrange) -/
 
 /-- Divided-difference / Vandermonde sum `D(t, x, k) = ∑ u, (x u)^k / ∏_{v ≠ u} (x u - x v)`. -/
-noncomputable def divDiffSum (t : ℕ) (x : Fin (t + 1) → ℂ) (k : ℕ) : ℂ :=
+noncomputable def divDiffSum (t : ℕ) (x : Fin (t + 1) → 𝕜) (k : ℕ) : 𝕜 :=
   ∑ u : Fin (t + 1), (x u) ^ k / ∏ v ∈ Finset.univ.erase u, (x u - x v)
 
 /-- Recursive complete homogeneous sum `hSum t x N`. -/
-noncomputable def hSum : (t : ℕ) → (Fin (t + 1) → ℂ) → ℕ → ℂ
+noncomputable def hSum : (t : ℕ) → (Fin (t + 1) → 𝕜) → ℕ → 𝕜
   | 0, x, N => (x 0) ^ N
   | t + 1, x, N =>
       ∑ j ∈ Finset.range (N + 1), (x (Fin.last (t + 1))) ^ j * hSum t (Fin.init x) (N - j)
 
-lemma hSum_zero (t : ℕ) (x : Fin (t + 1) → ℂ) : hSum t x 0 = 1 := by
+lemma hSum_zero (t : ℕ) (x : Fin (t + 1) → 𝕜) : hSum t x 0 = 1 := by
   induction t with
   | zero => simp [hSum]
   | succ t ih => simp [hSum, ih]
 
-lemma hSum_succ_N (t : ℕ) (x : Fin (t + 2) → ℂ) (N : ℕ) :
+lemma hSum_succ_N (t : ℕ) (x : Fin (t + 2) → 𝕜) (N : ℕ) :
     hSum (t + 1) x (N + 1) =
       x (Fin.last (t + 1)) * hSum (t + 1) x N + hSum t (Fin.init x) (N + 1) := by
   conv_lhs =>
@@ -44,7 +44,7 @@ lemma hSum_succ_N (t : ℕ) (x : Fin (t + 2) → ℂ) (N : ℕ) :
 
 /-- Recurrence 1 (`k → k + 1`):
 `D(t + 1, x, k + 1) - x(last) * D(t + 1, x, k) = D(t, Fin.init x, k)`. -/
-lemma divDiffSum_succ_k (t : ℕ) (x : Fin (t + 2) → ℂ) (hx : Function.Injective x) (k : ℕ) :
+lemma divDiffSum_succ_k (t : ℕ) (x : Fin (t + 2) → 𝕜) (hx : Function.Injective x) (k : ℕ) :
     divDiffSum (t + 1) x (k + 1) - x (Fin.last (t + 1)) * divDiffSum (t + 1) x k =
       divDiffSum t (Fin.init x) k := by
   dsimp [divDiffSum]
@@ -87,7 +87,7 @@ lemma divDiffSum_succ_k (t : ℕ) (x : Fin (t + 2) → ℂ) (hx : Function.Injec
 
 /-- Recurrence 2 (`k = 0`):
 `(x 0 - x last) * D(t + 1, x, 0) = D(t, Fin.init x, 0) - D(t, Fin.tail x, 0)`. -/
-lemma divDiffSum_zero_recurrence (t : ℕ) (x : Fin (t + 2) → ℂ) (hx : Function.Injective x) :
+lemma divDiffSum_zero_recurrence (t : ℕ) (x : Fin (t + 2) → 𝕜) (hx : Function.Injective x) :
     (x 0 - x (Fin.last (t + 1))) * divDiffSum (t + 1) x 0 =
       divDiffSum t (Fin.init x) 0 - divDiffSum t (Fin.tail x) 0 := by
   dsimp [divDiffSum]
@@ -96,10 +96,10 @@ lemma divDiffSum_zero_recurrence (t : ℕ) (x : Fin (t + 2) → ℂ) (hx : Funct
   let y := x (Fin.last (t + 1))
   let z := x 0
   have h0ne : (0 : Fin (t + 2)) ≠ Fin.last (t + 1) := Fin.ext_iff.ne.mpr (by simp)
-  let A : Fin (t + 2) → ℂ := fun u =>
+  let A : Fin (t + 2) → 𝕜 := fun u =>
     if h : u = Fin.last (t + 1) then 0
     else 1 / ∏ v ∈ (Finset.univ.erase u).erase (Fin.last (t + 1)), (x u - x v)
-  let B : Fin (t + 2) → ℂ := fun u =>
+  let B : Fin (t + 2) → 𝕜 := fun u =>
     if h : u = 0 then 0
     else 1 / ∏ v ∈ (Finset.univ.erase u).erase 0, (x u - x v)
   have hterm : ∀ u : Fin (t + 2),
@@ -194,7 +194,7 @@ lemma divDiffSum_zero_recurrence (t : ℕ) (x : Fin (t + 2) → ℂ) (hx : Funct
 
 /-- Polynomial-free Lagrange vanishing: `D(t, x, k) = 0` for `k < t`, and `= 1` for `k = t`. -/
 lemma divDiffSum_lt_and_eq :
-    ∀ (t : ℕ) (x : Fin (t + 1) → ℂ), Function.Injective x →
+    ∀ (t : ℕ) (x : Fin (t + 1) → 𝕜), Function.Injective x →
       (∀ k < t, divDiffSum t x k = 0) ∧ divDiffSum t x t = 1 := by
   intro t
   induction t with
@@ -231,7 +231,7 @@ lemma divDiffSum_lt_and_eq :
 
 /-- `hSum t x N = divDiffSum t x (t + N)` for any injective family `x`. -/
 lemma hSum_eq_divDiffSum :
-    ∀ (t : ℕ) (x : Fin (t + 1) → ℂ), Function.Injective x →
+    ∀ (t : ℕ) (x : Fin (t + 1) → 𝕜), Function.Injective x →
       ∀ N : ℕ, hSum t x N = divDiffSum t x (t + N) := by
   intro t
   induction t with
@@ -261,12 +261,12 @@ lemma hSum_eq_divDiffSum :
 def simplexSet (t N : ℕ) : Finset (Fin t → ℕ) :=
   (Fintype.piFinset fun _ : Fin t => Finset.range (N + 1)).filter (fun i => ∑ r : Fin t, i r ≤ N)
 
-noncomputable def simplexSum (t : ℕ) (lam : Fin t → ℂ) (N : ℕ) : ℂ :=
+noncomputable def simplexSum (t : ℕ) (lam : Fin t → 𝕜) (N : ℕ) : 𝕜 :=
   ∑ i ∈ simplexSet t N, ∏ r : Fin t, (lam r) ^ (i r)
 
 /-- Connection between `simplexSum` and `hSum` (with `x = Fin.cons 1 lam`). -/
 lemma simplexSum_eq_hSum :
-    ∀ (t : ℕ) (lam : Fin t → ℂ) (N : ℕ),
+    ∀ (t : ℕ) (lam : Fin t → 𝕜) (N : ℕ),
       simplexSum t lam N = hSum t (Fin.cons 1 lam) N := by
   intro t
   induction t with
@@ -287,13 +287,13 @@ lemma simplexSum_eq_hSum :
         Finset.single_le_sum (fun _ _ => Nat.zero_le _) (Finset.mem_univ _)
       omega
     rw [simplexSum, ← Finset.sum_fiberwise_of_maps_to hmaps]
-    have hlast_eq : (Fin.cons (1 : ℂ) lam : Fin (t + 2) → ℂ) (Fin.last (t + 1)) = lam (Fin.last t) :=
-      (congrArg (Fin.cons (1 : ℂ) lam)
+    have hlast_eq : (Fin.cons (1 : 𝕜) lam : Fin (t + 2) → 𝕜) (Fin.last (t + 1)) = lam (Fin.last t) :=
+      (congrArg (Fin.cons (1 : 𝕜) lam)
         (Fin.ext (by simp) : Fin.last (t + 1) = (Fin.last t).succ)).trans
-        (@Fin.cons_succ _ (fun _ => ℂ) (1 : ℂ) lam (Fin.last t))
+        (@Fin.cons_succ _ (fun _ => 𝕜) (1 : 𝕜) lam (Fin.last t))
     have hinit_eq :
-        Fin.init (Fin.cons (α := fun _ => ℂ) (1 : ℂ) lam) =
-          Fin.cons (α := fun _ => ℂ) (1 : ℂ) (Fin.init lam) := by
+        Fin.init (Fin.cons (α := fun _ => 𝕜) (1 : 𝕜) lam) =
+          Fin.cons (α := fun _ => 𝕜) (1 : 𝕜) (Fin.init lam) := by
       ext r; refine Fin.cases ?_ ?_ r
       · simp [Fin.init, Fin.cons]
       · intro k; simp [Fin.init, Fin.cons]
@@ -334,13 +334,13 @@ lemma simplexSum_eq_hSum :
 def annulusSet (t m M : ℕ) : Finset (Fin t → ℕ) :=
   (simplexSet t M).filter (fun i => M < m + ∑ r : Fin t, i r)
 
-/-- **Annular Cancellation**: for `m ≥ 2`, `t ≥ 1`, pairwise distinct `lam : Fin t → ℂ`
+/-- **Annular Cancellation**: for `m ≥ 2`, `t ≥ 1`, pairwise distinct `lam : Fin t → 𝕜`
 in `μ_m \ {1}`, and any `M` with `m ≤ M + t`, the sum over `annulusSet t m M` is `0`. -/
 theorem annular_cancellation {m t M : ℕ} (ht : 1 ≤ t) (hM : m ≤ M + t)
-    (lam : Fin t → ℂ) (hinj : Function.Injective lam)
+    (lam : Fin t → 𝕜) (hinj : Function.Injective lam)
     (hpow : ∀ r, (lam r) ^ m = 1) (hne1 : ∀ r, lam r ≠ 1) :
     ∑ i ∈ annulusSet t m M, ∏ r : Fin t, (lam r) ^ (i r) = 0 := by
-  let x : Fin (t + 1) → ℂ := Fin.cons 1 lam
+  let x : Fin (t + 1) → 𝕜 := Fin.cons 1 lam
   have hx_inj : Function.Injective x := by
     intro u v huv
     rcases Fin.eq_zero_or_eq_succ u with rfl | ⟨u', rfl⟩ <;>
@@ -401,7 +401,7 @@ theorem annular_cancellation {m t M : ℕ} (ht : 1 ≤ t) (hM : m ≤ M + t)
 
 /-- Corollary (Simplex Cancellation for Dubuc): case `M = m - t`. -/
 theorem simplex_cancellation {m t : ℕ} (ht : 1 ≤ t) (htm : t < m)
-    (lam : Fin t → ℂ) (hinj : Function.Injective lam)
+    (lam : Fin t → 𝕜) (hinj : Function.Injective lam)
     (hpow : ∀ r, (lam r) ^ m = 1) (hne1 : ∀ r, lam r ≠ 1) :
     simplexSum t lam (m - t) = 0 := by
   have hM : m ≤ (m - t) + t := by omega
@@ -415,15 +415,15 @@ theorem simplex_cancellation {m t : ℕ} (ht : 1 ≤ t) (htm : t < m)
 /-- Quotient-free Cayley–Hamilton substitute on `B / A`:
 if `A ≤ B` are `T`-invariant, every orbit `(T^[k]) x` (`x ∈ B`) lies in
 `A ⊔ span {T^j x | j < finrank B - finrank A}`. -/
-lemma span_orbit_mod_subspace {V : Type*} [AddCommGroup V] [Module ℂ V] [FiniteDimensional ℂ V]
-    (T : V →ₗ[ℂ] V) (A B : Submodule ℂ V) (hAB : A ≤ B)
+lemma span_orbit_mod_subspace {V : Type*} [AddCommGroup V] [Module 𝕜 V] [FiniteDimensional 𝕜 V]
+    (T : V →ₗ[𝕜] V) (A B : Submodule 𝕜 V) (hAB : A ≤ B)
     (hTA : ∀ x ∈ A, T x ∈ A) (hTB : ∀ x ∈ B, T x ∈ B)
     (x : V) (hx : x ∈ B) (k : ℕ) :
     (T^[k]) x ∈
-      A ⊔ Submodule.span ℂ {y | ∃ j < Module.finrank ℂ B - Module.finrank ℂ A, y = (T^[j]) x} := by
-  let d := Module.finrank ℂ B - Module.finrank ℂ A
-  let S : ℕ → Submodule ℂ V := fun t =>
-    A ⊔ Submodule.span ℂ {y | ∃ j < t, y = (T^[j]) x}
+      A ⊔ Submodule.span 𝕜 {y | ∃ j < Module.finrank 𝕜 B - Module.finrank 𝕜 A, y = (T^[j]) x} := by
+  let d := Module.finrank 𝕜 B - Module.finrank 𝕜 A
+  let S : ℕ → Submodule 𝕜 V := fun t =>
+    A ⊔ Submodule.span 𝕜 {y | ∃ j < t, y = (T^[j]) x}
   have hS0 : S 0 = A := by simp [S]
   have hSmono : ∀ t, S t ≤ S (t + 1) := fun t =>
     sup_le_sup_left (Submodule.span_mono (by rintro _ ⟨j, hj, rfl⟩; exact ⟨j, by omega, rfl⟩)) A
@@ -473,7 +473,7 @@ lemma span_orbit_mod_subspace {V : Type*} [AddCommGroup V] [Module ℂ V] [Finit
     | zero => exact hx_in
     | succ k ihk => rw [Function.iterate_succ_apply']; exact hinv _ ihk
   · push_neg at hstab
-    have hgrow : ∀ m ≤ d, Module.finrank ℂ A + m ≤ Module.finrank ℂ (S m) := by
+    have hgrow : ∀ m ≤ d, Module.finrank 𝕜 A + m ≤ Module.finrank 𝕜 (S m) := by
       intro m hm
       induction m with
       | zero => rw [hS0, Nat.add_zero]
@@ -496,14 +496,14 @@ lemma span_orbit_mod_subspace {V : Type*} [AddCommGroup V] [Module ℂ V] [Finit
 
 /-- `minpoly`-free nilpotency bound on quotients `B / A`:
 if `A ≤ B` are `T`-invariant and `T^[ℓ](B) ≤ A`, then `T^[i](B) ≤ A` for all `i ≥ finrank B - finrank A`. -/
-lemma nilpotent_step_mod_subspace {V : Type*} [AddCommGroup V] [Module ℂ V] [FiniteDimensional ℂ V]
-    (T : V →ₗ[ℂ] V) (A B : Submodule ℂ V) (hAB : A ≤ B)
+lemma nilpotent_step_mod_subspace {V : Type*} [AddCommGroup V] [Module 𝕜 V] [FiniteDimensional 𝕜 V]
+    (T : V →ₗ[𝕜] V) (A B : Submodule 𝕜 V) (hAB : A ≤ B)
     (hTA : ∀ x ∈ A, T x ∈ A) (hTB : ∀ x ∈ B, T x ∈ B)
     (ℓ : ℕ) (hNil : ∀ x ∈ B, (T^[ℓ]) x ∈ A)
-    (x : V) (hx : x ∈ B) (i : ℕ) (hi : Module.finrank ℂ B - Module.finrank ℂ A ≤ i) :
+    (x : V) (hx : x ∈ B) (i : ℕ) (hi : Module.finrank 𝕜 B - Module.finrank 𝕜 A ≤ i) :
     (T^[i]) x ∈ A := by
   classical
-  let d := Module.finrank ℂ B - Module.finrank ℂ A
+  let d := Module.finrank 𝕜 B - Module.finrank 𝕜 A
   suffices hd : (T^[d]) x ∈ A by
     have hshift : i = (i - d) + d := by omega
     rw [hshift, Function.iterate_add_apply]
@@ -544,8 +544,8 @@ lemma nilpotent_step_mod_subspace {V : Type*} [AddCommGroup V] [Module ℂ V] [F
   have hdr : d ≤ r := by
     by_contra hlt; push_neg at hlt
     exact hnotA (hr_max d hlt)
-  let W : ℕ → Submodule ℂ V := fun k =>
-    A ⊔ Submodule.span ℂ {y | ∃ j, 1 ≤ j ∧ j ≤ k ∧ y = (T^[r + 1 - j]) x}
+  let W : ℕ → Submodule 𝕜 V := fun k =>
+    A ⊔ Submodule.span 𝕜 {y | ∃ j, 1 ≤ j ∧ j ≤ k ∧ y = (T^[r + 1 - j]) x}
   have hW0 : W 0 = A := by
     dsimp [W]; convert sup_bot_eq A
     rw [Submodule.span_eq_bot]; rintro _ ⟨j, hj1, hj0, _⟩; omega
@@ -578,7 +578,7 @@ lemma nilpotent_step_mod_subspace {V : Type*} [AddCommGroup V] [Module ℂ V] [F
       | zero => rfl
       | succ m ihm => rw [Function.iterate_succ_apply', Function.iterate_succ_apply',
                           Function.iterate_succ_apply', ihm, map_add]
-    have hTk_smul : ∀ (m : ℕ) (c : ℂ) (v : V), (T^[m]) (c • v) = c • (T^[m]) v := by
+    have hTk_smul : ∀ (m : ℕ) (c : 𝕜) (v : V), (T^[m]) (c • v) = c • (T^[m]) v := by
       intro m c v
       induction m with
       | zero => rfl
@@ -602,7 +602,7 @@ lemma nilpotent_step_mod_subspace {V : Type*} [AddCommGroup V] [Module ℂ V] [F
       have hadd : r = k + (r - k) := by omega
       rw [hadd, Function.iterate_add_apply, ← hab, hTk_linear]
     exact hr_not (hTr ▸ Submodule.add_mem A (hTkA k a ha) hTkb)
-  have hgrow : ∀ k ≤ r + 1, Module.finrank ℂ A + k ≤ Module.finrank ℂ (W k) := by
+  have hgrow : ∀ k ≤ r + 1, Module.finrank 𝕜 A + k ≤ Module.finrank 𝕜 (W k) := by
     intro k hk
     induction k with
     | zero => rw [hW0, Nat.add_zero]
