@@ -42,6 +42,13 @@ def rowAct (𝕜 : Type*) [CommSemiring 𝕜] (A : Aut Q α) (w : List α) :
     refine Finset.sum_congr rfl (fun p _ => ?_)
     split_ifs <;> simp
 
+@[simp] lemma pullbackLin_apply (𝕜 : Type*) [CommSemiring 𝕜] (A : Aut Q α) (w : List α)
+    (f : Q → 𝕜) (p : Q) : pullbackLin 𝕜 A w f p = f (A.eval p w) := rfl
+
+@[simp] lemma rowAct_apply (𝕜 : Type*) [CommSemiring 𝕜] (A : Aut Q α) (w : List α)
+    (f : Q → 𝕜) (q : Q) :
+    rowAct 𝕜 A w f q = ∑ p : Q, if A.eval p w = q then f p else 0 := rfl
+
 /-- Standard bilinear pairing `∑ q, f q * g q` on `Q → 𝕜`. -/
 def dot (𝕜 : Type*) [CommSemiring 𝕜] (f g : Q → 𝕜) : 𝕜 :=
   ∑ q : Q, f q * g q

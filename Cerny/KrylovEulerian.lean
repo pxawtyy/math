@@ -95,8 +95,8 @@ theorem krylov_nonconstant_preimage [Nonempty Q] (hsync : A.IsSync)
   have hsum_pull : ∀ w : List α,
       sumLin Q (pullbackLin A w v₀) = ((A.preimage S w).card : ℚ) - (S.card : ℚ) := by
     intro w
-    simp only [sumLin, pullbackLin, Cerny.Linear.pullbackLin, LinearMap.coe_mk, AddHom.coe_mk,
-      v₀, Pi.sub_apply,
+    simp only [sumLin, pullbackLin, Cerny.Linear.pullbackLin_apply, LinearMap.coe_mk,
+      AddHom.coe_mk, v₀, Pi.sub_apply,
       Pi.smul_apply, smul_eq_mul, indS, ones, mul_one, Finset.sum_sub_distrib, Finset.sum_const,
       Finset.card_univ, nsmul_eq_mul]
     have hpre : ∑ q : Q, (if A.eval q w ∈ S then (1 : ℚ) else 0) =

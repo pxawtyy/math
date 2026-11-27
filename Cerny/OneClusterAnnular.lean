@@ -1,5 +1,4 @@
 import Mathlib.Analysis.SpecialFunctions.Complex.Circle
-import Mathlib.Basic.Complex.Basic
 import Mathlib.Data.Finset.Card
 import Mathlib.LinearAlgebra.Dimension.Finrank
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
@@ -305,7 +304,7 @@ lemma rowAct_a_indC (A : Aut Q α) (a : α) :
     rowAct A [a] (indC (cycleStates A a)) = indC (cycleStates A a) := by
   have hbij := step_a_bijOn_cycleStates A a
   ext q
-  simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk, indC, Aut.eval,
+  simp only [rowAct, Cerny.Linear.rowAct_apply, indC, Aut.eval,
     List.foldl_cons, List.foldl_nil]
   by_cases hq : q ∈ cycleStates A a
   · simp only [hq, ↓reduceIte]
@@ -395,7 +394,7 @@ lemma rowAct_replicate_period (A : Aut Q α) (a : α) (h1c : IsOneCluster A a) (
     rowAct A (List.replicate (cycleLevel A a + (cycleStates A a).card) a) f =
       rowAct A (List.replicate (cycleLevel A a) a) f := by
   ext q
-  simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+  simp only [rowAct, Cerny.Linear.rowAct_apply]
   refine Finset.sum_congr rfl (fun p _ => ?_)
   have hmem : A.eval p (List.replicate (cycleLevel A a) a) ∈ cycleStates A a :=
     eval_replicate_mem_cycleStates A a p 0
@@ -426,7 +425,7 @@ lemma rowAct_replicate_period_of_mem (A : Aut Q α) (a : α) (h1c : IsOneCluster
     rowAct A (List.replicate (cycleStates A a).card a) f = f := by
   rcases hf with ⟨g, rfl⟩
   ext q
-  simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk, projC]
+  simp only [rowAct, Cerny.Linear.rowAct_apply, LinearMap.coe_mk, AddHom.coe_mk, projC]
   by_cases hq : q ∈ cycleStates A a
   · simp only [hq, ↓reduceIte]
     rw [Finset.sum_eq_single q]
@@ -500,7 +499,7 @@ lemma eigProj_zero_mem_span (A : Aut Q α) (a : α) (h1c : IsOneCluster A a) (f 
   by_cases hq : q ∈ C
   · simp only [hq, ↓reduceIte, mul_one, one_div, div_eq_inv_mul]
     congr 1
-    simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+    simp only [rowAct, Cerny.Linear.rowAct_apply]
     rw [Finset.sum_comm]
     refine Finset.sum_congr rfl (fun p _ => ?_)
     have hp_mem : A.eval p (List.replicate ℓ a) ∈ C :=
@@ -527,7 +526,7 @@ lemma eigProj_zero_mem_span (A : Aut Q α) (a : α) (h1c : IsOneCluster A a) (f 
   · simp only [hq, ↓reduceIte, mul_zero, mul_eq_zero]
     right
     refine Finset.sum_eq_zero (fun j _ => ?_)
-    simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+    simp only [rowAct, Cerny.Linear.rowAct_apply]
     refine Finset.sum_eq_zero (fun p _ => ?_)
     split_ifs with heq
     · have hp_mem : A.eval p (List.replicate (ℓ + j.1) a) ∈ C :=
@@ -715,7 +714,7 @@ lemma eigProj_range_le_of_mem_ne_zero [Nonempty Q] (A : Aut Q α) (a : α)
       suffices h0 : ∀ j : Fin m, (rowAct A (List.replicate (ℓ' + j.1) a) u) q = 0 by
         rw [Finset.sum_eq_zero (fun j _ => by rw [h0 j, mul_zero]), mul_zero]
       intro j
-      simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+      simp only [rowAct, Cerny.Linear.rowAct_apply]
       refine Finset.sum_eq_zero (fun p _ => ?_)
       split_ifs with heq
       · have hsplit : ℓ' + j.1 = ℓ + ((ℓ' - ℓ) + j.1) := by omega
@@ -731,7 +730,7 @@ lemma eigProj_range_le_of_mem_ne_zero [Nonempty Q] (A : Aut Q α) (a : α)
     have hbij_j := eval_replicate_injOn_cycleStates A a j
     have hrow_eq : rowAct A (List.replicate j a) (eigProj A a C ℓ' r u)
         (A.eval c₀ (List.replicate j a)) = eigProj A a C ℓ' r u c₀ := by
-      simp only [rowAct, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+      simp only [rowAct, Cerny.Linear.rowAct_apply]
       rw [Finset.sum_eq_single c₀]
       · simp
       · intro p _ hpne

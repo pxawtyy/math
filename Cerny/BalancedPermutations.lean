@@ -70,11 +70,8 @@ lemma R_replicate_eq_pow (A : Aut Q α) (a : α) (j : ℕ) :
     rfl
 
 lemma R_replicate_eq_iterate (A : Aut Q α) (a : α) (j : ℕ) (x : Q → ℚ) :
-    R A (List.replicate j a) x = ((R A [a])^[j]) x := by
-  induction j with
-  | zero => simp [R_nil]
-  | succ j ih =>
-    rw [List.replicate_succ', R_append, LinearMap.comp_apply, ih, Function.iterate_succ_apply']
+    R A (List.replicate j a) x = ((R A [a])^[j]) x :=
+  Cerny.Linear.rowAct_eq_iterate ℚ A a j x
 
 /-- Zero-sum hyperplane `K₀ Q = ker (sumLin Q)` of dimension `n - 1`. -/
 abbrev K₀ (Q : Type*) [Fintype Q] : Submodule ℚ (Q → ℚ) :=
@@ -955,7 +952,7 @@ theorem coprime_step_balanced_cerny [Nonempty Q] (A : Aut Q α) (hsync : A.IsSyn
         R A (List.replicate j a) (fun q => if q = x then (1 : ℚ) else 0) =
           (fun q => if q = A.eval x (List.replicate j a) then 1 else 0) := by
       intro j x; ext q
-      simp only [R, Cerny.Linear.rowAct, LinearMap.coe_mk, AddHom.coe_mk]
+      simp only [R, Cerny.Linear.rowAct_apply]
       rw [Finset.sum_eq_single x]
       · simp [eq_comm]
       · intro p _ hpx; simp [hpx]
