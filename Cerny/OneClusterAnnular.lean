@@ -1974,12 +1974,16 @@ theorem one_cluster_annular_extension
   rw [hψ_i'] at hi'_zero
   exact hψ_ne hi'_zero
 
-/-- **Full One-Cluster Černý Bound**:
-Every synchronizing automaton with a one-cluster letter `a` has a synchronizing word
-of length at most `(n - 1) ^ 2` (including `n = 1` where `[]` synchronizes in length `0`). -/
-theorem one_cluster_cerny_bound
+/-- **Sharp One-Cluster Steinberg–Annular Bound (arbitrary composite cycle length `m`):**
+Every synchronizing automaton with a one-cluster letter `a` has a synchronizing word of
+length at most `(m - 1) * (n - 1) + m * ℓ ≤ (n - 1) ^ 2`. -/
+theorem one_cluster_steinberg_bound
     (A : Aut Q α) (hsync : A.IsSync) (a : α) (h1c : IsOneCluster A a) :
-    ∃ w : List α, A.IsSyncWord w ∧ w.length ≤ (Fintype.card Q - 1) ^ 2 := by
+    ∃ w : List α, A.IsSyncWord w ∧
+      w.length ≤ ((cycleStates A a).card - 1) * (Fintype.card Q - 1) +
+        (cycleStates A a).card * cycleLevel A a ∧
+      ((cycleStates A a).card - 1) * (Fintype.card Q - 1) +
+        (cycleStates A a).card * cycleLevel A a ≤ (Fintype.card Q - 1) ^ 2 := by
   let C := cycleStates A a
   let m := C.card
   let ℓ := cycleLevel A a
@@ -1987,25 +1991,31 @@ theorem one_cluster_cerny_bound
   have hm_pos : 1 ≤ m := (cycleStates_nonempty A a).card_pos
   have hℓ_le : ℓ ≤ n - m := cycleLevel_le A a
   have hm_le_n : m ≤ n := Finset.card_le_univ C
+  have hbound_le : (m - 1) * (n - 1) + m * ℓ ≤ (n - 1) ^ 2 := by
+    have hmul : m * ℓ ≤ m * (n - m) := Nat.mul_le_mul_left m hℓ_le
+    have hdiff : n - m ≤ (n - m) ^ 2 := by rw [sq]; exact Nat.le_mul_self _
+    have hm_eq : m = (m - 1) + 1 := by omega
+    have hn_eq : n - 1 = (m - 1) + (n - m) := by omega
+    calc (m - 1) * (n - 1) + m * ℓ
+        ≤ (m - 1) * (n - 1) + m * (n - m) := Nat.add_le_add_left hmul _
+      _ = (m - 1) * (n - 1) + (m - 1) * (n - m) + (n - m) := by
+          have hmul_eq : m * (n - m) = (m - 1) * (n - m) + (n - m) := by
+            conv_lhs => lhs; rw [hm_eq]
+            ring
+          rw [hmul_eq]; ring
+      _ ≤ (m - 1) * (n - 1) + (m - 1) * (n - m) + (n - m) ^ 2 := Nat.add_le_add_left hdiff _
+      _ = (n - 1) ^ 2 := by rw [hn_eq]; ring
   by_cases hm1 : m = 1
-  · exact one_cluster_m_eq_one_bound A a hm1
+  · obtain ⟨c₀, hc₀⟩ := Finset.card_eq_one.mp hm1
+    refine ⟨List.replicate ℓ a, ?_, ?_, hbound_le⟩
+    · rw [Aut.isSyncWord_iff_exists_eval_eq]
+      refine ⟨c₀, fun q => ?_⟩
+      have hmem : A.eval q (List.replicate ℓ a) ∈ C :=
+        eval_replicate_mem_cycleStates A a q 0
+      rwa [hc₀, Finset.mem_singleton] at hmem
+    · have hC_card : C.card = 1 := by simpa [m] using hm1
+      simp [C, hC_card, ℓ]
   · have hm2 : 2 ≤ m := by omega
-    have hbound_le : (n - m + 1 + ℓ) + (m - 2) * (n + ℓ) + ℓ ≤ (n - 1) ^ 2 := by
-      have h1 : (m - 2) * (n + ℓ) ≤ (m - 2) * (n + (n - m)) :=
-        Nat.mul_le_mul_left (m - 2) (Nat.add_le_add_left hℓ_le n)
-      let d := n - m
-      let k := m - 2
-      have hn_d : n = d + k + 2 := by dsimp only [d, k, m, n] at hm_le_n hm2 ⊢; omega
-      have hm_k : m = k + 2 := by dsimp only [k, m] at hm2 ⊢; omega
-      have h_alg : d + 1 + (n - m) + k * (n + (n - m)) + (n - m) ≤ (n - 1) ^ 2 := by
-        have h_n1 : n - 1 = d + k + 1 := by omega
-        have h_2n : n + (n - m) = 2 * d + k + 2 := by omega
-        have hdd : d ≤ d * d := Nat.le_mul_self d
-        rw [h_n1, h_2n]
-        change d + 1 + d + k * (2 * d + k + 2) + d ≤ (d + k + 1) ^ 2
-        nlinarith
-      dsimp only [d, k, m, n, ℓ] at hℓ_le h1 h_alg ⊢
-      omega
     obtain ⟨c₀, _, w₁, hw₁_len, hw₁_card⟩ := multi_cluster_initial_step A hsync a hm2
     let u₀ := w₁ ++ List.replicate ℓ a
     let S₁ := A.preimage {c₀} u₀
@@ -2049,13 +2059,25 @@ theorem one_cluster_cerny_bound
     obtain ⟨v, hvC, hv_len⟩ := hgrow (m - (S₁ ∩ C).card) S₁ u₀
       (by have := Finset.card_le_card (Finset.inter_subset_right : S₁ ∩ C ⊆ C); omega)
       hw₁_card (Finset.Subset.refl _) (hu₀_len.trans (Nat.le_add_right _ _))
-    refine ⟨List.replicate ℓ a ++ v, ?_, ?_⟩
+    refine ⟨List.replicate ℓ a ++ v, ?_, ?_, hbound_le⟩
     · rw [Aut.isSyncWord_iff_preimage_univ]
       refine ⟨c₀, Finset.eq_univ_iff_forall.mpr (fun q => ?_)⟩
       rw [← Aut.preimage_append, Aut.mem_preimage]
       exact hvC (eval_replicate_mem_cycleStates A a q 0)
     · simp only [List.length_append, List.length_replicate]
-      dsimp only [m, n, ℓ] at hv_len hbound_le ⊢; omega
+      have harith : ℓ + ((n - m + 1 + ℓ) + (m - 2) * (n + ℓ)) = (m - 1) * (n - 1) + m * ℓ := by
+        zify [hm_pos, hm2, hm_le_n, show 1 ≤ n by omega]
+        ring
+      exact le_trans (Nat.add_le_add_left hv_len ℓ) (le_of_eq harith)
+
+/-- **Full One-Cluster Černý Bound**:
+Every synchronizing automaton with a one-cluster letter `a` has a synchronizing word
+of length at most `(n - 1) ^ 2` (including `n = 1` where `[]` synchronizes in length `0`). -/
+theorem one_cluster_cerny_bound
+    (A : Aut Q α) (hsync : A.IsSync) (a : α) (h1c : IsOneCluster A a) :
+    ∃ w : List α, A.IsSyncWord w ∧ w.length ≤ (Fintype.card Q - 1) ^ 2 := by
+  obtain ⟨w, hw, hlen, hle⟩ := one_cluster_steinberg_bound A hsync a h1c
+  exact ⟨w, hw, hlen.trans hle⟩
 
 /-- **Dubuc's Circular Theorem**: every synchronizing automaton with a circular letter `a`
 (`a` is a single `n`-cycle on `Q`) has a synchronizing word of length at most `(n - 1) ^ 2`. -/

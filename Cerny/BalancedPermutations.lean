@@ -469,6 +469,51 @@ private lemma right_krylov_detect [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
     apply hne0
     rw [evalSubset_ρ, heq, sub_self]
 
+/-- Any degree-`g` (`g ≥ 1`) polynomial with nonzero leading coefficient annihilating `K₀' A a`
+forces `{ρ(b · a^j) | b ≠ a, j ≤ g - 1}` to span `K₀' A a`. -/
+lemma K₀'_span_of_annihilator (A : Aut Q α) (a : α)
+    (hbij : Function.Bijective (fun q => A.step q a))
+    (g : ℕ) (hg : 1 ≤ g) (p : Fin (g + 1) → ℚ) (hp_top : p (Fin.last g) ≠ 0)
+    (hann : ∀ x ∈ K₀' A a, ∑ j : Fin (g + 1), p j • R A (List.replicate j.1 a) x = 0) :
+    K₀' A a ≤ Submodule.span ℚ
+      {x | ∃ (b : α) (j : ℕ), b ≠ a ∧ j ≤ g - 1 ∧ x = ρ A (b :: List.replicate j a)} := by
+  let W := Submodule.span ℚ
+    {x | ∃ (b : α) (j : ℕ), b ≠ a ∧ j ≤ g - 1 ∧ x = ρ A (b :: List.replicate j a)}
+  have hrec : ∀ (b : α) (hba : b ≠ a) (r : ℕ), ρ A (b :: List.replicate r a) ∈ W := by
+    intro b hba r
+    induction r using Nat.strong_induction_on with
+    | ind r ih =>
+      by_cases hrg : r ≤ g - 1
+      · exact Submodule.subset_span ⟨b, r, hba, hrg, rfl⟩
+      · have hx_mem : ρ A (b :: List.replicate (r - g) a) ∈ K₀' A a :=
+          Submodule.subset_span ⟨b, r - g, hba, rfl⟩
+        have h0 := hann _ hx_mem
+        rw [Fin.sum_univ_castSucc] at h0
+        have hlast_eq : R A (List.replicate g a) (ρ A (b :: List.replicate (r - g) a)) =
+            ρ A (b :: List.replicate r a) := by
+          rw [ρ_append_replicate_a A hbij, List.cons_append, ← List.replicate_add,
+              Nat.sub_add_cancel (by omega)]
+        rw [Fin.val_last, hlast_eq] at h0
+        have hsolve : ρ A (b :: List.replicate r a) =
+            -(p (Fin.last g))⁻¹ •
+              ∑ j : Fin g, p j.castSucc •
+                R A (List.replicate j.1 a) (ρ A (b :: List.replicate (r - g) a)) := by
+          have h1 : p (Fin.last g) • ρ A (b :: List.replicate r a) =
+              - ∑ j : Fin g, p j.castSucc •
+                  R A (List.replicate j.1 a) (ρ A (b :: List.replicate (r - g) a)) :=
+            eq_neg_of_add_eq_zero_right h0
+          calc ρ A (b :: List.replicate r a)
+              = (p (Fin.last g))⁻¹ • (p (Fin.last g) • ρ A (b :: List.replicate r a)) := by
+                  rw [smul_smul, inv_mul_cancel₀ hp_top, one_smul]
+            _ = _ := by rw [h1, smul_neg, neg_smul]
+        rw [hsolve]
+        refine Submodule.smul_mem W _ (Submodule.sum_mem W fun j _ => Submodule.smul_mem W _ ?_)
+        rw [ρ_append_replicate_a A hbij, List.cons_append, ← List.replicate_add]
+        exact ih (r - g + j.1) (by omega)
+  rw [K₀', Submodule.span_le]
+  rintro _ ⟨b, r, hba, rfl⟩
+  exact hrec b hba r
+
 /-- **Master Theorem (Version A — Theorem 11.6):**
 If `a` is a bijection on `Q` and `c : Fin (D + 1) → ℚ` (`D ≥ 1`) has **strictly positive**
 coefficients summing to `1` such that `∑ j, c j • R A (a^j) x = 0` for all `x ∈ K₀' A a`,
@@ -484,44 +529,9 @@ theorem master_balanced_version_A [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
       S.card < (A.preimage S w).card := by
   -- 1. `{ρ(b · a^j) | b ≠ a, j ≤ D}` already spans `K₀' A a` (using `c D > 0`)
   have hspan : K₀' A a ≤ Submodule.span ℚ
-      {x | ∃ (b : α) (j : ℕ), b ≠ a ∧ j ≤ D ∧ x = ρ A (b :: List.replicate j a)} := by
-    let W := Submodule.span ℚ
-      {x | ∃ (b : α) (j : ℕ), b ≠ a ∧ j ≤ D ∧ x = ρ A (b :: List.replicate j a)}
-    have hrec : ∀ (b : α) (hba : b ≠ a) (r : ℕ), ρ A (b :: List.replicate r a) ∈ W := by
-      intro b hba r
-      induction r using Nat.strong_induction_on with
-      | ind r ih =>
-        by_cases hrD : r ≤ D
-        · exact Submodule.subset_span ⟨b, r, hba, hrD, rfl⟩
-        · have hx_mem : ρ A (b :: List.replicate (r - D) a) ∈ K₀' A a :=
-            Submodule.subset_span ⟨b, r - D, hba, rfl⟩
-          have h0 := hann _ hx_mem
-          rw [Fin.sum_univ_castSucc] at h0
-          have hcD_ne : c (Fin.last D) ≠ 0 := ne_of_gt (hc_pos (Fin.last D))
-          have hlast_eq : R A (List.replicate D a) (ρ A (b :: List.replicate (r - D) a)) =
-              ρ A (b :: List.replicate r a) := by
-            rw [ρ_append_replicate_a A hbij, List.cons_append, ← List.replicate_add,
-                Nat.sub_add_cancel (by omega)]
-          rw [Fin.val_last, hlast_eq] at h0
-          have hsolve : ρ A (b :: List.replicate r a) =
-              -(c (Fin.last D))⁻¹ •
-                ∑ j : Fin D, c j.castSucc •
-                  R A (List.replicate j.1 a) (ρ A (b :: List.replicate (r - D) a)) := by
-            have h1 : c (Fin.last D) • ρ A (b :: List.replicate r a) =
-                - ∑ j : Fin D, c j.castSucc •
-                    R A (List.replicate j.1 a) (ρ A (b :: List.replicate (r - D) a)) := by
-              exact eq_neg_of_add_eq_zero_right h0
-            calc ρ A (b :: List.replicate r a)
-                = (c (Fin.last D))⁻¹ • (c (Fin.last D) • ρ A (b :: List.replicate r a)) := by
-                    rw [smul_smul, inv_mul_cancel₀ hcD_ne, one_smul]
-              _ = _ := by rw [h1, smul_neg, neg_smul]
-          rw [hsolve]
-          refine Submodule.smul_mem W _ (Submodule.sum_mem W fun j _ => Submodule.smul_mem W _ ?_)
-          rw [ρ_append_replicate_a A hbij, List.cons_append, ← List.replicate_add]
-          exact ih (r - D + j.1) (by omega)
-    rw [K₀', Submodule.span_le]
-    rintro _ ⟨b, r, hba, rfl⟩
-    exact hrec b hba r
+      {x | ∃ (b : α) (j : ℕ), b ≠ a ∧ j ≤ D ∧ x = ρ A (b :: List.replicate j a)} :=
+    (K₀'_span_of_annihilator A a hbij D hD c (ne_of_gt (hc_pos (Fin.last D))) hann).trans
+      (Submodule.span_mono (by rintro _ ⟨b, j, hba, hj, rfl⟩; exact ⟨b, j, hba, by omega, rfl⟩))
   -- 2. Apply `right_krylov_detect`
   obtain ⟨b, j_star, u, hba, hj_le, hu_len, hu_eq, hne⟩ :=
     right_krylov_detect A hsync a hbij D hspan hS_pos hS_lt
@@ -567,38 +577,24 @@ theorem master_balanced_version_A [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
     rw [finrank_ker_sumLin] at h1; exact h1
   omega
 
-/-- **Master Theorem (Version B — Theorem 12.1):**
-If `a` is a bijection on `Q` and `c : Fin (D + 1) → ℚ` has **nonnegative** coefficients
-with `c 0 > 0` and `∑ j, c j = 1` annihilating `K₀' A a`, then every `S` (`1 ≤ |S| < n`)
-is `(n + D - 1)`-extensible! -/
-theorem master_balanced_version_B [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync) (a : α)
+/-- **Strengthened Master Theorem (Version B with span bound `J`):**
+If `a` is a bijection on `Q`, `{ρ(b · a^j) | b ≠ a, j ≤ J}` spans `K₀' A a`, and
+`c : Fin (D + 1) → ℚ` has nonnegative coefficients with `c 0 > 0` and `∑ j, c j = 1`
+annihilating `K₀' A a`, then every `S` (`1 ≤ |S| < n`) is `(n + D + J - dim K₀')`-extensible. -/
+theorem master_balanced_version_B_span [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync) (a : α)
     (hbij : Function.Bijective (fun q => A.step q a))
-    (D : ℕ) (c : Fin (D + 1) → ℚ)
+    (J D : ℕ)
+    (hspan : K₀' A a ≤ Submodule.span ℚ
+      {x | ∃ (b : α) (j : ℕ), b ≠ a ∧ j ≤ J ∧ x = ρ A (b :: List.replicate j a)})
+    (c : Fin (D + 1) → ℚ)
     (hc_nonneg : ∀ j, 0 ≤ c j) (hc0_pos : 0 < c 0) (hc_sum : ∑ j : Fin (D + 1), c j = 1)
     (hann : ∀ x ∈ K₀' A a, ∑ j : Fin (D + 1), c j • R A (List.replicate j.1 a) x = 0)
     {S : Finset Q} (hS_pos : 1 ≤ S.card) (hS_lt : S.card < Fintype.card Q) :
     ∃ w : List α,
-      w.length ≤ Fintype.card Q + D - 1 ∧
+      w.length ≤ Fintype.card Q + D + J - Module.finrank ℚ (K₀' A a) ∧
       S.card < (A.preimage S w).card := by
-  let d₀ := Module.finrank ℚ (K₀' A a)
-  have hd₀_pos : 1 ≤ d₀ := by
-    change 1 ≤ Module.finrank ℚ (K₀' A a)
-    exact one_le_finrank_K₀'_of_isSync A hsync a hbij (by omega : 2 ≤ Fintype.card Q)
-  -- By `span_orbit_le_finrank_Q`, `{ρ(b · a^j) | b ≠ a, j ≤ d₀ - 1}` spans `K₀' A a`!
-  have hspan : K₀' A a ≤ Submodule.span ℚ
-      {x | ∃ (b : α) (j : ℕ), b ≠ a ∧ j ≤ d₀ - 1 ∧ x = ρ A (b :: List.replicate j a)} := by
-    rw [K₀', Submodule.span_le]
-    rintro _ ⟨b, r, hba, rfl⟩
-    have hmem := span_orbit_le_finrank_Q (R A [a]) (K₀' A a)
-      (fun x hx => K₀'_R_a_inv A hbij hx) (ρ A [b]) (ρ_single_mem_K₀' A hbij b) r
-    rw [← R_replicate_eq_iterate, ρ_append_replicate_a A hbij, List.singleton_append] at hmem
-    refine (Submodule.span_mono ?_) hmem
-    rintro _ ⟨j, hj, rfl⟩
-    rw [← R_replicate_eq_iterate, ρ_append_replicate_a A hbij, List.singleton_append]
-    exact ⟨b, j, hba, by omega, rfl⟩
   obtain ⟨b, j_star, u, hba, hj_le, hu_len, hu_eq, hne⟩ :=
-    right_krylov_detect A hsync a hbij (d₀ - 1) hspan hS_pos hS_lt
-  -- Apply `hann` to `ρ A (b :: replicate j_star a) ∈ K₀' A a`!
+    right_krylov_detect A hsync a hbij J hspan hS_pos hS_lt
   have havg : ∑ j : Fin (D + 1),
       c j * ((A.preimage S (b :: List.replicate (j_star + j.1) a ++ u)).card : ℚ) = (S.card : ℚ) := by
     have hmem : ρ A (b :: List.replicate j_star a) ∈ K₀' A a :=
@@ -638,10 +634,40 @@ theorem master_balanced_version_B [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync)
   obtain ⟨j_pos, hj_gt⟩ := hgt_ex
   refine ⟨b :: List.replicate (j_star + j_pos.1) a ++ u, ?_, hj_gt⟩
   simp only [List.length_append, List.length_cons, List.length_replicate]
-  have hd0_le : d₀ ≤ Fintype.card Q - 1 := by
+  have hd0_le : Module.finrank ℚ (K₀' A a) ≤ Fintype.card Q - 1 := by
     have h1 := Submodule.finrank_mono (K₀'_le_K0 A a)
     rw [finrank_ker_sumLin] at h1; exact h1
   omega
+
+/-- **Master Theorem (Version B — Theorem 12.1):**
+Corollary of `master_balanced_version_B_span` with `J = dim K₀' - 1`. -/
+theorem master_balanced_version_B [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync) (a : α)
+    (hbij : Function.Bijective (fun q => A.step q a))
+    (D : ℕ) (c : Fin (D + 1) → ℚ)
+    (hc_nonneg : ∀ j, 0 ≤ c j) (hc0_pos : 0 < c 0) (hc_sum : ∑ j : Fin (D + 1), c j = 1)
+    (hann : ∀ x ∈ K₀' A a, ∑ j : Fin (D + 1), c j • R A (List.replicate j.1 a) x = 0)
+    {S : Finset Q} (hS_pos : 1 ≤ S.card) (hS_lt : S.card < Fintype.card Q) :
+    ∃ w : List α,
+      w.length ≤ Fintype.card Q + D - 1 ∧
+      S.card < (A.preimage S w).card := by
+  let d₀ := Module.finrank ℚ (K₀' A a)
+  have hd₀_pos : 1 ≤ d₀ :=
+    one_le_finrank_K₀'_of_isSync A hsync a hbij (by omega : 2 ≤ Fintype.card Q)
+  have hspan : K₀' A a ≤ Submodule.span ℚ
+      {x | ∃ (b : α) (j : ℕ), b ≠ a ∧ j ≤ d₀ - 1 ∧ x = ρ A (b :: List.replicate j a)} := by
+    rw [K₀', Submodule.span_le]
+    rintro _ ⟨b, r, hba, rfl⟩
+    have hmem := span_orbit_le_finrank_Q (R A [a]) (K₀' A a)
+      (fun x hx => K₀'_R_a_inv A hbij hx) (ρ A [b]) (ρ_single_mem_K₀' A hbij b) r
+    rw [← R_replicate_eq_iterate, ρ_append_replicate_a A hbij, List.singleton_append] at hmem
+    refine (Submodule.span_mono ?_) hmem
+    rintro _ ⟨j, hj, rfl⟩
+    rw [← R_replicate_eq_iterate, ρ_append_replicate_a A hbij, List.singleton_append]
+    exact ⟨b, j, hba, by omega, rfl⟩
+  obtain ⟨w, hw_len, hw_gt⟩ :=
+    master_balanced_version_B_span A hsync a hbij (d₀ - 1) D hspan c hc_nonneg hc0_pos hc_sum
+      hann hS_pos hS_lt
+  exact ⟨w, by dsimp only [d₀] at hd₀_pos hw_len; omega, hw_gt⟩
 
 end MasterTheorems
 
@@ -1114,6 +1140,121 @@ theorem phi6_l1_norm_ge_four (v : Fin 6 → ℤ) (hv : v ≠ 0)
   have htri : 2 ≤ (v 0).natAbs + (v 2).natAbs + (v 0 + v 2).natAbs := by
     rcases hne02 with h0ne | h2ne <;> omega
   omega
+
+/-- **Composite-Order Černý Theorem via Degree-`g` Annihilator + Nonnegative Multiple:**
+If `K₀' A a` is annihilated by a polynomial `p` of degree `g ≥ 1` (possibly with negative
+coefficients, e.g. `Φ_d`) and by a nonnegative probability polynomial `c` of degree `D`
+with `c 0 > 0`, and `D + g - 1 ≤ dim K₀' A a`, then `A` satisfies Černý's bound `(n - 1)^2`. -/
+theorem balanced_cerny_of_annihilator_and_pos_multiple [Nonempty Q]
+    (A : Aut Q α) (hsync : A.IsSync) (a : α)
+    (hbij : Function.Bijective (fun q => A.step q a))
+    (g D : ℕ) (hg : 1 ≤ g)
+    (p : Fin (g + 1) → ℚ) (hp_top : p (Fin.last g) ≠ 0)
+    (hann_p : ∀ x ∈ K₀' A a, ∑ j : Fin (g + 1), p j • R A (List.replicate j.1 a) x = 0)
+    (c : Fin (D + 1) → ℚ)
+    (hc_nonneg : ∀ j, 0 ≤ c j) (hc0_pos : 0 < c 0) (hc_sum : ∑ j : Fin (D + 1), c j = 1)
+    (hann_c : ∀ x ∈ K₀' A a, ∑ j : Fin (D + 1), c j • R A (List.replicate j.1 a) x = 0)
+    (hdim : D + g - 1 ≤ Module.finrank ℚ (K₀' A a)) :
+    ∃ w : List α, A.IsSyncWord w ∧ w.length ≤ (Fintype.card Q - 1) ^ 2 := by
+  apply cerny_of_n_extensible A hsync
+  intro S hS_pos hS_lt
+  have hspan := K₀'_span_of_annihilator A a hbij g hg p hp_top hann_p
+  obtain ⟨w, hw_len, hw_gt⟩ :=
+    master_balanced_version_B_span A hsync a hbij (g - 1) D hspan c hc_nonneg hc0_pos hc_sum
+      hann_c hS_pos hS_lt
+  exact ⟨w, by omega, hw_gt⟩
+
+/-- **New Corollary (`Φ₄` with `dim K₀' ≥ 3`):**
+Complements Counterexample 2 (`ex2`, where `K₀' ⊆ ker Φ₄` has `dim = 2` and min extension `n + 1`):
+as soon as `dim K₀' ≥ 3`, `n`-extensibility and Černý's bound `(n - 1)^2` hold unconditionally. -/
+theorem phi4_high_dim_balanced_cerny [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync) (a : α)
+    (hbij : Function.Bijective (fun q => A.step q a))
+    (hphi4 : ∀ x ∈ K₀' A a, R A (List.replicate 2 a) x + x = 0)
+    (hdim : 3 ≤ Module.finrank ℚ (K₀' A a)) :
+    ∃ w : List α, A.IsSyncWord w ∧ w.length ≤ (Fintype.card Q - 1) ^ 2 := by
+  let p : Fin 3 → ℚ := fun j => if j.1 = 1 then 0 else 1
+  have hp0 : p 0 = 1 := by simp [p]
+  have hp1 : p 1 = 0 := by simp [p]
+  have hp2 : p 2 = 1 := by simp [p]
+  have hp_top : p (Fin.last 2) ≠ 0 := by
+    rw [show Fin.last 2 = (2 : Fin 3) from rfl, hp2]; norm_num
+  have hann_p : ∀ x ∈ K₀' A a, ∑ j : Fin 3, p j • R A (List.replicate j.1 a) x = 0 := by
+    intro x hx
+    rw [Fin.sum_univ_three, hp0, hp1, hp2]
+    simp only [Fin.val_zero, Fin.val_two, List.replicate_zero, R_nil, LinearMap.id_apply,
+      one_smul, zero_smul, add_zero]
+    rw [add_comm]
+    exact hphi4 x hx
+  let c : Fin 3 → ℚ := fun j => if j.1 = 1 then 0 else (1 : ℚ) / 2
+  have hc0 : c 0 = 1 / 2 := by simp [c]
+  have hc1 : c 1 = 0 := by simp [c]
+  have hc2 : c 2 = 1 / 2 := by simp [c]
+  have hc_nonneg : ∀ j : Fin 3, 0 ≤ c j := by intro j; fin_cases j <;> norm_num [c]
+  have hc0_pos : 0 < c 0 := by rw [hc0]; norm_num
+  have hc_sum : ∑ j : Fin 3, c j = 1 := by rw [Fin.sum_univ_three, hc0, hc1, hc2]; norm_num
+  have hann_c : ∀ x ∈ K₀' A a, ∑ j : Fin 3, c j • R A (List.replicate j.1 a) x = 0 := by
+    intro x hx
+    rw [Fin.sum_univ_three, hc0, hc1, hc2]
+    simp only [Fin.val_zero, Fin.val_two, List.replicate_zero, R_nil, LinearMap.id_apply,
+      zero_smul, add_zero]
+    rw [← smul_add, add_comm, hphi4 x hx, smul_zero]
+  exact balanced_cerny_of_annihilator_and_pos_multiple A hsync a hbij 2 2 (by omega)
+    p hp_top hann_p c hc_nonneg hc0_pos hc_sum hann_c (by omega)
+
+/-- **New Corollary (`Φ₆` with `dim K₀' ≥ 4`):**
+Complements Counterexample 3 (`ex3`, where `K₀' ⊆ ker Φ₆` has `dim = 2` and min extension `n + 1`):
+using `p = Φ₆` (`g = 2`) and `c = (1/2)(1 + X^3)` (`D = 3`), whenever `dim K₀' ≥ 4`,
+`n`-extensibility and Černý's bound `(n - 1)^2` hold unconditionally. -/
+theorem phi6_high_dim_balanced_cerny [Nonempty Q] (A : Aut Q α) (hsync : A.IsSync) (a : α)
+    (hbij : Function.Bijective (fun q => A.step q a))
+    (hphi6 : ∀ x ∈ K₀' A a, R A (List.replicate 2 a) x - R A [a] x + x = 0)
+    (hdim : 4 ≤ Module.finrank ℚ (K₀' A a)) :
+    ∃ w : List α, A.IsSyncWord w ∧ w.length ≤ (Fintype.card Q - 1) ^ 2 := by
+  let p : Fin 3 → ℚ := fun j => if j.1 = 1 then -1 else 1
+  have hp0 : p 0 = 1 := by simp [p]
+  have hp1 : p 1 = -1 := by simp [p]
+  have hp2 : p 2 = 1 := by simp [p]
+  have hp_top : p (Fin.last 2) ≠ 0 := by
+    rw [show Fin.last 2 = (2 : Fin 3) from rfl, hp2]; norm_num
+  have hann_p : ∀ x ∈ K₀' A a, ∑ j : Fin 3, p j • R A (List.replicate j.1 a) x = 0 := by
+    intro x hx
+    rw [Fin.sum_univ_three, hp0, hp1, hp2]
+    simp only [Fin.val_zero, Fin.val_one, Fin.val_two, List.replicate_zero, List.replicate_one,
+      R_nil, LinearMap.id_apply, one_smul, neg_smul]
+    have hrew : x + -(R A [a] x) + R A (List.replicate 2 a) x =
+        R A (List.replicate 2 a) x - R A [a] x + x := by abel
+    rw [hrew]
+    exact hphi6 x hx
+  let c : Fin 4 → ℚ := fun j => if j.1 = 0 ∨ j.1 = 3 then (1 : ℚ) / 2 else 0
+  have hc0 : c 0 = 1 / 2 := by simp [c]
+  have hc1 : c 1 = 0 := by simp [c]
+  have hc2 : c 2 = 0 := by simp [c]
+  have hc3 : c 3 = 1 / 2 := by simp [c]
+  have hc_nonneg : ∀ j : Fin 4, 0 ≤ c j := by intro j; fin_cases j <;> norm_num [c]
+  have hc0_pos : 0 < c 0 := by rw [hc0]; norm_num
+  have hc_sum : ∑ j : Fin 4, c j = 1 := by
+    rw [Fin.sum_univ_four, hc0, hc1, hc2, hc3]; norm_num
+  have hann_c : ∀ x ∈ K₀' A a, ∑ j : Fin 4, c j • R A (List.replicate j.1 a) x = 0 := by
+    intro x hx
+    have h1 := hphi6 x hx
+    have h2 := hphi6 (R A [a] x) (K₀'_R_a_inv A hbij hx)
+    have hr3 : R A (List.replicate 2 a) (R A [a] x) = R A (List.replicate 3 a) x := by
+      rw [← LinearMap.comp_apply, ← R_append]; rfl
+    have hr2 : R A [a] (R A [a] x) = R A (List.replicate 2 a) x := by
+      rw [← LinearMap.comp_apply, ← R_append]; rfl
+    rw [hr3, hr2] at h2
+    have hcube : R A (List.replicate 3 a) x + x = 0 := by
+      have hadd := congrArg₂ (· + ·) h2 h1
+      rw [add_zero] at hadd
+      have hrew : (R A (List.replicate 3 a) x - R A (List.replicate 2 a) x + R A [a] x) +
+          (R A (List.replicate 2 a) x - R A [a] x + x) = R A (List.replicate 3 a) x + x := by abel
+      rwa [hrew] at hadd
+    rw [Fin.sum_univ_four, hc0, hc1, hc2, hc3]
+    simp only [Fin.val_zero, show (3 : Fin 4).val = 3 from rfl, List.replicate_zero,
+      R_nil, LinearMap.id_apply, zero_smul, add_zero]
+    rw [← smul_add, add_comm, hcube, smul_zero]
+  exact balanced_cerny_of_annihilator_and_pos_multiple A hsync a hbij 2 3 (by omega)
+    p hp_top hann_p c hc_nonneg hc0_pos hc_sum hann_c (by omega)
 
 end MultiCycleCorollaries
 
